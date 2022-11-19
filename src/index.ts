@@ -13,20 +13,29 @@ async function main() {
 	document.body.append($map)
 
 	const e=makeEscapeTag(encodeURIComponent)
+	const tileWidth=256
+	const tileHeight=256
 	const zoom=17
 	const lat=59.93903
 	const lon=30.31582
-	const x=lon2tile(lon,zoom)
-	const y=lat2tile(lat,zoom)
-	const tileUrl=e`https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`
+	const x=lon2x(lon,zoom)
+	const y=lat2y(lat,zoom)
+	const tileX=Math.floor(x)
+	const tileY=Math.floor(y)
+	const pixelX=Math.floor(x*tileWidth)
+	const pixelY=Math.floor(y*tileHeight)
+	const transX=$map.clientWidth/2-pixelX%tileWidth
+	const transY=$map.clientHeight/2-pixelY%tileHeight
+	const tileUrl=e`https://tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`
 	const $img=document.createElement('img')
 	$img.src=tileUrl
+	$img.style.translate=`${transX}px ${transY}px`
 	$tiles.append($img)
 
-	function lat2tile(lat:number,zoom:number):number {
-		return Math.floor((1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2*Math.pow(2,zoom))
+	function lat2y(lat:number,zoom:number):number {
+		return (1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2*Math.pow(2,zoom)
 	}
-	function lon2tile(lon:number,zoom:number):number {
-		return Math.floor((lon+180)/360*Math.pow(2,zoom))
+	function lon2x(lon:number,zoom:number):number {
+		return (lon+180)/360*Math.pow(2,zoom)
 	}
 }

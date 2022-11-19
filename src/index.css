@@ -9,6 +9,7 @@ body > .symbols {
 	border: solid 1px;
 }
 .map .tiles img {
+	position: absolute;
 	width: 256px;
 	height: 256px;
 }
