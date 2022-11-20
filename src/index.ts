@@ -15,7 +15,7 @@ async function main() {
 	const initialLon=30.31582
 	let position:[x:number,y:number,z:number]=calculatePosition(initialZoom,initialLat,initialLon)
 
-	const updateInputs=()=>{
+	const updateHash=()=>{
 		const [zoom,lat,lon]=calculateCoords(...position)
 		const mapHash=`#map=${zoom.toFixed(0)}/${lat.toFixed(5)}/${lon.toFixed(5)}`
 		history.replaceState(null,'',mapHash)
@@ -69,11 +69,17 @@ async function main() {
 		const mapHash=searchParams.get('map')
 		if (!mapHash) return
 		const [zoomString,latString,lonString]=mapHash.split('/')
-		// TODO check validity
 		const zoom=parseInt(zoomString,10)
 		const lat=parseFloat(latString)
 		const lon=parseFloat(lonString)
-		position=calculatePosition(zoom,lat,lon)
+		if (isNaN(zoom) || isNaN(lat) || isNaN(lon)) return
+		const zoom1=Math.min(maxZoom,Math.max(0,zoom))
+		const [x,y,z]=calculatePosition(zoom1,lat,lon)
+		const mask=Math.pow(2,z+tileSizePow)-1
+		const x1=x&mask
+		let y1=Math.min(mask,Math.max(0,y))
+		position=[x1,y1,z]
+		if (zoom!=zoom1 || x!=x1 || y!=y1) updateHash()
 		replaceTiles()
 	}
 
@@ -89,7 +95,7 @@ async function main() {
 			Math.min(mask,Math.max(0,(y-ev.movementY))),
 			z
 		]
-		updateInputs()
+		updateHash()
 		replaceTiles()
 	}
 	$map.onwheel=ev=>{
@@ -111,7 +117,7 @@ async function main() {
 			y=Math.floor(2*y+dy)
 		}
 		position=[x,y,z]
-		updateInputs()
+		updateHash()
 		replaceTiles()
 	}
 }
