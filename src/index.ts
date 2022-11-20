@@ -8,22 +8,30 @@ async function main() {
 	const e=makeEscapeTag(encodeURIComponent)
 	const tileSizeX=256
 	const tileSizeY=256
-	const zoom=17
-	const lat=59.93903
-	const lon=30.31582
-	let position:[x:number,y:number,z:number]=calculatePosition(zoom,lat,lon)
+	const initialZoom=17
+	const initialLat=59.93903
+	const initialLon=30.31582
+	let position:[x:number,y:number,z:number]=calculatePosition(initialZoom,initialLat,initialLon)
 	
 	const $zoom=makeElement('input')()()
 	$zoom.type='number'
 	$zoom.min='0'
 	$zoom.max='19'
-	$zoom.value=String(zoom)
+	$zoom.value=String(initialZoom)
+	const $lat=makeElement('input')()()
+	$lat.value=String(initialLat)
+	const $lon=makeElement('input')()()
+	$lon.value=String(initialLon)
 	const $tiles=makeDiv('tiles')()
 	const $crosshair=makeDiv('crosshair')()
 	const $map=makeDiv('map')($tiles,$crosshair)
 	$crosshair.innerHTML=`<svg><use href="#map-crosshair" /></svg>`
 	document.body.append(
-		makeDiv('input')(makeElement('label')()(`Zoom: `,$zoom)),
+		makeDiv()(
+			makeElement('label')()(`Zoom: `,$zoom),` `,
+			makeElement('label')()(`Lat: `,$lat),` `,
+			makeElement('label')()(`Lon: `,$lon)
+		),
 		$map
 	)
 
@@ -62,8 +70,12 @@ async function main() {
 			}
 		}
 	}
-	$zoom.oninput=()=>{
-		position=calculatePosition(Number($zoom.value),lat,lon)
+	$zoom.oninput=$lat.oninput=$lon.oninput=()=>{
+		position=calculatePosition(
+			parseInt($zoom.value,10),
+			parseFloat($lat.value),
+			parseFloat($lon.value)
+		)
 		replaceTiles()
 	}
 	const resizeObserver=new ResizeObserver(replaceTiles)
