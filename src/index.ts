@@ -13,8 +13,8 @@ async function main() {
 	document.body.append($map)
 
 	const e=makeEscapeTag(encodeURIComponent)
-	const tileWidth=256
-	const tileHeight=256
+	const tileSizeX=256
+	const tileSizeY=256
 	const zoom=17
 	const lat=59.93903
 	const lon=30.31582
@@ -22,10 +22,12 @@ async function main() {
 	const y=lat2y(lat,zoom)
 	const tileX=Math.floor(x)
 	const tileY=Math.floor(y)
-	const pixelX=Math.floor(x*tileWidth)
-	const pixelY=Math.floor(y*tileHeight)
-	const transX=$map.clientWidth/2-pixelX%tileWidth
-	const transY=$map.clientHeight/2-pixelY%tileHeight
+	const pixelX=Math.floor(x*tileSizeX)
+	const pixelY=Math.floor(y*tileSizeY)
+	// const transX=$map.clientWidth/2-pixelX%tileSizeX
+	// const transY=$map.clientHeight/2-pixelY%tileSizeY
+	const transX=-pixelX%tileSizeX
+	const transY=-pixelY%tileSizeY
 	const tileUrl=e`https://tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`
 	const $img=document.createElement('img')
 	$img.src=tileUrl
