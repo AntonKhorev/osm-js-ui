@@ -106,16 +106,20 @@ async function main() {
 	$map.onwheel=ev=>{
 		const dz=-Math.sign(ev.deltaY)
 		if (!dz) return
+		const viewHalfSizeX=$map.clientWidth/2
+		const viewHalfSizeY=$map.clientHeight/2
+		const dx=ev.offsetX-viewHalfSizeX
+		const dy=ev.offsetY-viewHalfSizeY
 		let [x,y,z]=position
 		z+=dz
 		if (dz<0) {
 			if (z<0) return
-			x>>=1
-			y>>=1
+			x=Math.floor((x-dx)/2)
+			y=Math.floor((y-dy)/2)
 		} else {
 			if (z>maxZoom) return
-			x<<=1
-			y<<=1
+			x=Math.floor(2*x+dx)
+			y=Math.floor(2*y+dy)
 		}
 		position=[x,y,z]
 		updateInputs()
