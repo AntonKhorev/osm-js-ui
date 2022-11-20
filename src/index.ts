@@ -38,13 +38,23 @@ async function main() {
 		const transY=-pixelY%tileSizeY
 		const viewHalfSizeX=$map.clientWidth/2
 		const viewHalfSizeY=$map.clientHeight/2
-		const nExtraTilesXL=Math.floor((viewHalfSizeX+transX)/tileSizeX)+1
-		const nExtraTilesXU=Math.floor((viewHalfSizeX-transX)/tileSizeX)
-		const nExtraTilesYL=Math.floor((viewHalfSizeY+transY)/tileSizeY)+1
-		const nExtraTilesYU=Math.floor((viewHalfSizeY-transY)/tileSizeY)
+		const tileRange=Math.pow(2,z)
+		const tileMask=tileRange-1
+		const nExtraTilesXL=
+			Math.floor((viewHalfSizeX+transX)/tileSizeX)+1
+		const nExtraTilesXU=
+			Math.floor((viewHalfSizeX-transX)/tileSizeX)
+		const nExtraTilesYL=Math.min(
+			tileY,
+			Math.floor((viewHalfSizeY+transY)/tileSizeY)+1
+		)
+		const nExtraTilesYU=Math.min(
+			tileRange-tileY-1,
+			Math.floor((viewHalfSizeY-transY)/tileSizeY)
+		)
 		for (let iTileY=-nExtraTilesYL;iTileY<=nExtraTilesYU;iTileY++) {
 			for (let iTileX=-nExtraTilesXL;iTileX<=nExtraTilesXU;iTileX++) {
-				const tileUrl=e`https://tile.openstreetmap.org/${z}/${tileX+iTileX}/${tileY+iTileY}.png` // TODO check bounds
+				const tileUrl=e`https://tile.openstreetmap.org/${z}/${(tileX+iTileX)&tileMask}/${tileY+iTileY}.png`
 				const $img=document.createElement('img')
 				$img.src=tileUrl
 				$img.style.translate=`${transX+iTileX*tileSizeX}px ${transY+iTileY*tileSizeY}px`
