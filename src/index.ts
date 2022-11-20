@@ -28,11 +28,17 @@ async function main() {
 	// const transY=$map.clientHeight/2-pixelY%tileSizeY
 	const transX=-pixelX%tileSizeX
 	const transY=-pixelY%tileSizeY
-	const tileUrl=e`https://tile.openstreetmap.org/${zoom}/${tileX}/${tileY}.png`
-	const $img=document.createElement('img')
-	$img.src=tileUrl
-	$img.style.translate=`${transX}px ${transY}px`
-	$tiles.append($img)
+	const nSurroundingTilesX=2
+	const nSurroundingTilesY=1
+	for (let iTileY=-nSurroundingTilesY;iTileY<=nSurroundingTilesY;iTileY++) {
+		for (let iTileX=-nSurroundingTilesX;iTileX<=nSurroundingTilesX;iTileX++) {
+			const tileUrl=e`https://tile.openstreetmap.org/${zoom}/${tileX+iTileX}/${tileY+iTileY}.png` // TODO check bounds
+			const $img=document.createElement('img')
+			$img.src=tileUrl
+			$img.style.translate=`${transX+iTileX*tileSizeX}px ${transY+iTileY*tileSizeY}px`
+			$tiles.append($img)
+		}
+	}
 
 	function lat2y(lat:number,zoom:number):number {
 		return (1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2*Math.pow(2,zoom)
