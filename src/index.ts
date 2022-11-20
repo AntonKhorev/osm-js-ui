@@ -92,10 +92,13 @@ async function main() {
 
 	$map.onmousemove=ev=>{
 		if (!(ev.buttons&1)) return
-		let [x,y,z]=position
-		x-=ev.movementX
-		y-=ev.movementY
-		position=[x,y,z]
+		const [x,y,z]=position
+		const mask=Math.pow(2,z+tileSizePow)-1
+		position=[
+			(x-ev.movementX)&mask,
+			Math.min(mask,Math.max(0,(y-ev.movementY))),
+			z
+		]
 		updateInputs()
 		replaceTiles()
 	}
