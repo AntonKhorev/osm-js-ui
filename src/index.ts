@@ -25,11 +25,13 @@ async function main() {
 	const $lon=makeElement('input')()()
 	$lon.value=String(initialLon)
 
-	const updateInputs=()=>{
+	const updateInputs=()=>{ // TODO update only hash
 		const [zoom,lat,lon]=calculateCoords(...position)
 		$zoom.value=String(zoom)
 		$lat.value=String(lat)
 		$lon.value=String(lon)
+		const mapHash=`#map=${zoom.toFixed(0)}/${lat.toFixed(5)}/${lon.toFixed(5)}`
+		history.replaceState(null,'',mapHash)
 	}
 
 	const $tiles=makeDiv('tiles')()
@@ -85,6 +87,21 @@ async function main() {
 			parseFloat($lat.value),
 			parseFloat($lon.value)
 		)
+		replaceTiles()
+	}
+	window.onhashchange=ev=>{
+		const paramString = (location.hash[0]=='#')
+			? location.hash.slice(1)
+			: location.hash
+		const searchParams=new URLSearchParams(paramString)
+		const mapHash=searchParams.get('map')
+		if (!mapHash) return
+		const [zoomString,latString,lonString]=mapHash.split('/')
+		// TODO check validity
+		const zoom=parseInt(zoomString,10)
+		const lat=parseFloat(latString)
+		const lon=parseFloat(lonString)
+		position=calculatePosition(zoom,lat,lon)
 		replaceTiles()
 	}
 
