@@ -9,6 +9,7 @@ main()
 
 async function main() {
 	const e=makeEscapeTag(encodeURIComponent)
+	const maxZoom=19
 	const initialZoom=17
 	const initialLat=59.93903
 	const initialLon=30.31582
@@ -17,7 +18,7 @@ async function main() {
 	const $zoom=makeElement('input')()()
 	$zoom.type='number'
 	$zoom.min='0'
-	$zoom.max='19'
+	$zoom.max=String(maxZoom)
 	$zoom.value=String(initialZoom)
 	const $lat=makeElement('input')()()
 	$lat.value=String(initialLat)
@@ -99,6 +100,24 @@ async function main() {
 			Math.min(mask,Math.max(0,(y-ev.movementY))),
 			z
 		]
+		updateInputs()
+		replaceTiles()
+	}
+	$map.onwheel=ev=>{
+		const dz=-Math.sign(ev.deltaY)
+		if (!dz) return
+		let [x,y,z]=position
+		z+=dz
+		if (dz<0) {
+			if (z<0) return
+			x>>=1
+			y>>=1
+		} else {
+			if (z>maxZoom) return
+			x<<=1
+			y<<=1
+		}
+		position=[x,y,z]
 		updateInputs()
 		replaceTiles()
 	}
