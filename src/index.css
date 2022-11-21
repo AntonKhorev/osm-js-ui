@@ -11,6 +11,19 @@ body > .symbols {
 	height: 100%;
 	display: flex;
 }
+.ui .buttons {
+	--gap: 8px;
+	--button-size: 32px;
+	display: flex;
+	padding: var(--gap);
+	gap: var(--gap);
+}
+.ui .buttons button {
+	width: var(--button-size);
+	height: var(--button-size);
+	overflow: hidden;
+	flex: 0 0 auto;
+}
 .ui.landscape {
 	flex-direction: row;
 }
@@ -18,26 +31,58 @@ body > .symbols {
 	flex-direction: column;
 }
 .ui .resizer {
+	display: none;
 	background: #CCC;
 	flex: 0 0 8px;
 }
+.ui.with-sidebar.with-map .resizer {
+	display: block;
+}
 .ui.landscape .resizer {
+	cursor: col-resize;
+}
+.ui.landscape.resizing {
 	cursor: col-resize;
 }
 .ui.portrait .resizer {
 	cursor: row-resize;
 }
-
-.sidebar {
-	flex: 0 0 30%;
+.ui.portrait.resizing {
+	cursor: row-resize;
 }
 
-.map {
+.ui .sidebar {
+	display: none;
+	flex: 0 0 30%;
+}
+.ui:not(.with-map) .sidebar {
+	flex-grow: 1;
+}
+.ui.with-sidebar .sidebar {
+	display: block;
+}
+.ui .sidebar .buttons button:not(:first-child) {
+	order: 1;
+}
+.ui .sidebar .buttons h1 {
+	flex: 1 1 auto;
+	margin: 0;
+}
+
+.ui .map {
+	display: none;
 	flex: 1 1 auto;
 	position: relative;
 	overflow: hidden;
 }
-.map .tiles {
+.ui.with-map .map {
+	display: block;
+}
+.ui .map .buttons {
+	position: absolute;
+	z-index: 1;
+}
+.ui .map .tiles {
 	position: relative;
 	width: 0;
 	height: 0;
@@ -45,19 +90,19 @@ body > .symbols {
 	left: 50%;
 	pointer-events: none;
 }
-.map .tiles img {
+.ui .map .tiles img {
 	position: absolute;
 	width: 256px;
 	height: 256px;
 }
-.map .crosshair {
+.ui .map .crosshair {
 	position: absolute;
 	inset: 0;
 	display: grid;
 	place-items: center;
 	pointer-events: none;
 }
-.map .crosshair svg {
+.ui .map .crosshair svg {
 	height: 15px;
 	width: 15px;
 }

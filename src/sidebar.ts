@@ -1,5 +1,9 @@
+import {makeElement} from './util'
+
 export default class Sidebar {
-	constructor($sidebar: HTMLElement) {
-		$sidebar.append('TODO')
+	constructor($sidebar: HTMLElement, $sidebarHeading: HTMLHeadingElement) {
+		$sidebarHeading.append(
+			`Temporary sidebar title`
+		)
 	}
 }
