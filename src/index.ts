@@ -37,24 +37,34 @@ async function main() {
 	}
 
 	let resizing=false
-	$resizer.onmousedown=ev=>{
+	const startResizing=()=>{
 		const sidebarSize=pickOriented($sidebar.clientWidth,$sidebar.clientHeight)
 		if (sidebarSize==null) return
 		$sidebar.style.flexBasis=sidebarSize+'px'
 		resizing=true
 	}
+	const stopResizing=()=>{
+		resizing=false
+		const sidebarSize=pickOriented($sidebar.clientWidth,$sidebar.clientHeight)
+		const uiSize=pickOriented($ui.clientWidth,$ui.clientHeight)
+		if (sidebarSize==null || uiSize==null) return
+		const sidebarPercentSize=sidebarSize/uiSize*100
+		$sidebar.style.flexBasis=sidebarPercentSize.toFixed(4)+'%'
+	}
+	$resizer.onmousedown=startResizing
 	$ui.onmouseup=ev=>{
 		if (!resizing) return
 		ev.stopPropagation()
+		stopResizing()
 		resizing=false
 	}
 	$ui.addEventListener('mousemove',ev=>{
 		if (!resizing) return
+		ev.stopPropagation()
 		if (!(ev.buttons&1)) {
-			resizing=false
+			stopResizing()
 			return
 		}
-		ev.stopPropagation()
 		const sidebarSize=pickOriented($sidebar.clientWidth,$sidebar.clientHeight)
 		const dSidebarSize=pickOriented(ev.movementX,ev.movementY)
 		if (sidebarSize==null || dSidebarSize==null) return
