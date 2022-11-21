@@ -11,7 +11,20 @@ async function main() {
 	new Sidebar($sidebar)
 	const $map=makeDiv('map')()
 	new Map($map)
-	document.body.append(makeDiv('ui')(
-		$sidebar,$map
-	))
+	const $resizer=makeDiv('resizer')()
+	const $ui=makeDiv('ui')(
+		$sidebar,$resizer,$map
+	)
+	document.body.append($ui)
+
+	const resizeObserver=new ResizeObserver(()=>{
+		if ($ui.clientWidth>=$ui.clientHeight) {
+			$ui.classList.remove('portrait')
+			$ui.classList.add('landscape')
+		} else {
+			$ui.classList.remove('landscape')
+			$ui.classList.add('portrait')
+		}
+	})
+	resizeObserver.observe($ui)
 }
