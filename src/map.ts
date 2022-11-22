@@ -117,8 +117,8 @@ export default class Map {
 			zoom(dx,dy,dz)
 		}
 
-		let moveLastX:number
-		let moveLastY:number
+		let moveLastX:number|undefined
+		let moveLastY:number|undefined
 		$surface.onpointerdown=ev=>{
 			moveLastX=ev.clientX
 			moveLastY=ev.clientY
@@ -128,13 +128,12 @@ export default class Map {
 		$surface.onpointerup=ev=>{
 			$surface.classList.remove('grabbed')
 			$surface.releasePointerCapture(ev.pointerId)
+			moveLastX=moveLastY=undefined
 			updateHash()
 		}
 		$surface.onpointermove=ev=>{
-			if (!(ev.buttons&1)) return
-			if (moveLastX!=null && moveLastY!=null) {
-				pan(moveLastX-ev.clientX,moveLastY-ev.clientY)
-			}
+			if (moveLastX==null || moveLastY==null) return
+			pan(moveLastX-ev.clientX,moveLastY-ev.clientY)
 			moveLastX=ev.clientX
 			moveLastY=ev.clientY
 		}
