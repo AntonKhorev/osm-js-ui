@@ -16,3 +16,10 @@ export function makeElement<K extends keyof HTMLElementTagNameMap>(tag: K): ((..
 		return $element
 	}
 }
+
+export function makeLink(text: string, href: string): HTMLAnchorElement {
+	const $link=document.createElement('a')
+	$link.href=href
+	$link.textContent=text
+	return $link
+}

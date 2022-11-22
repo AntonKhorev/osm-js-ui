@@ -1,4 +1,4 @@
-import {makeElement, makeEscapeTag} from './util'
+import {makeEscapeTag, makeElement, makeLink} from './util'
 
 const makeDiv=makeElement('div')
 const e=makeEscapeTag(encodeURIComponent)
@@ -18,7 +18,10 @@ export default class Map {
 		const $tiles=makeDiv('tiles')()
 		const $crosshair=makeDiv('crosshair')()
 		$crosshair.innerHTML=`<svg><use href="#map-crosshair" /></svg>`
-		$map.append($surface,$tiles,$crosshair)
+		const $attribution=makeDiv('attribution')(
+			`© `,makeLink(`OpenStreetMap contributors`,`https://www.openstreetmap.org/copyright`)
+		)
+		$map.append($surface,$tiles,$crosshair,$attribution)
 
 		let position:[x:number,y:number,z:number]=calculatePosition(initialZoom,initialLat,initialLon)
 

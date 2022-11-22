@@ -110,3 +110,14 @@ body > .symbols {
 	height: 15px;
 	width: 15px;
 }
+.ui .map .attribution {
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	padding: 2px 4px;
+	background: #FFFC;
+	font: 11px sans-serif;
+}
+.ui .map .attribution a:not(:hover) {
+	text-decoration: none;
+}
