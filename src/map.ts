@@ -85,6 +85,17 @@ export default class Map {
 		const resizeObserver=new ResizeObserver(replaceTiles)
 		resizeObserver.observe($map)
 
+		const pan=(dx:number,dy:number)=>{
+			const [x,y,z]=position
+			const mask=Math.pow(2,z+tileSizePow)-1
+			position=[
+				(x+dx)&mask,
+				Math.min(mask,Math.max(0,(y+dy))),
+				z
+			]
+			updateHash()
+			replaceTiles()
+		}
 		const zoom=(dx:number,dy:number,dz:number)=>{
 			let [x,y,z]=position
 			z+=dz
@@ -103,15 +114,7 @@ export default class Map {
 		}
 		$map.onmousemove=ev=>{
 			if (!(ev.buttons&1)) return
-			const [x,y,z]=position
-			const mask=Math.pow(2,z+tileSizePow)-1
-			position=[
-				(x-ev.movementX)&mask,
-				Math.min(mask,Math.max(0,(y-ev.movementY))),
-				z
-			]
-			updateHash()
-			replaceTiles()
+			pan(-ev.movementX,-ev.movementY)
 		}
 		$map.onwheel=ev=>{
 			const dz=-Math.sign(ev.deltaY)
@@ -123,7 +126,16 @@ export default class Map {
 			zoom(dx,dy,dz)
 		}
 		$map.onkeydown=ev=>{
-			if (ev.key=='+') {
+			const step=32
+			if (ev.key=='ArrowLeft') {
+				pan(-step,0)
+			} else if (ev.key=='ArrowRight') {
+				pan(+step,0)
+			} else if (ev.key=='ArrowUp') {
+				pan(0,-step)
+			} else if (ev.key=='ArrowDown') {
+				pan(0,+step)
+			} else if (ev.key=='+') {
 				zoom(0,0,+1)
 			} else if (ev.key=='-') {
 				zoom(0,0,-1)
