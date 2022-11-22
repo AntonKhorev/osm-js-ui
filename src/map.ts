@@ -128,15 +128,17 @@ export default class Map {
 			zoom(dx,dy,dz)
 		}
 		$surface.onkeydown=ev=>{
-			const step=32
+			const panStepBase=32
+			const multiplier=ev.shiftKey?3:1
+			const panStep=panStepBase*multiplier
 			if (ev.key=='ArrowLeft') {
-				pan(-step,0)
+				pan(-panStep,0)
 			} else if (ev.key=='ArrowRight') {
-				pan(+step,0)
+				pan(+panStep,0)
 			} else if (ev.key=='ArrowUp') {
-				pan(0,-step)
+				pan(0,-panStep)
 			} else if (ev.key=='ArrowDown') {
-				pan(0,+step)
+				pan(0,+panStep)
 			} else if (ev.key=='+') {
 				zoom(0,0,+1)
 			} else if (ev.key=='-') {
