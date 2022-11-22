@@ -143,7 +143,11 @@ export default class Map {
 				zoom(0,0,+1)
 			} else if (ev.key=='-') {
 				zoom(0,0,-1)
+			} else {
+				return
 			}
+			ev.stopPropagation()
+			ev.preventDefault()
 		}
 	}
 }
