@@ -100,16 +100,13 @@ export default class Map {
 		}
 		const zoom=(dx:number,dy:number,dz:number)=>{
 			let [x,y,z]=position
+			if (z+dz<0) dz=-z
+			if (z+dz>maxZoom) dz=maxZoom-z
+			if (dz==0) return
 			z+=dz
-			if (dz<0) {
-				if (z<0) return
-				x=Math.floor((x-dx)/2)
-				y=Math.floor((y-dy)/2)
-			} else {
-				if (z>maxZoom) return
-				x=Math.floor(2*x+dx)
-				y=Math.floor(2*y+dy)
-			}
+			const f=Math.pow(2,dz)
+			x=Math.floor(f*x+(f-1)*dx)
+			y=Math.floor(f*y+(f-1)*dy)
 			position=[x,y,z]
 			updateHash()
 			replaceTiles()
@@ -140,9 +137,9 @@ export default class Map {
 			} else if (ev.key=='ArrowDown') {
 				pan(0,+panStep)
 			} else if (ev.key=='+') {
-				zoom(0,0,+1)
+				zoom(0,0,+multiplier)
 			} else if (ev.key=='-') {
-				zoom(0,0,-1)
+				zoom(0,0,-multiplier)
 			} else {
 				return
 			}
