@@ -81,6 +81,10 @@ body > .symbols {
 .ui .map .surface {
 	position: absolute;
 	inset: 0;
+	cursor: grab;
+}
+.ui .map .surface.grabbed {
+	cursor: grabbing;
 }
 .ui .map .tiles {
 	position: absolute;

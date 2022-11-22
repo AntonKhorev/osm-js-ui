@@ -123,8 +123,10 @@ export default class Map {
 			moveLastX=ev.clientX
 			moveLastY=ev.clientY
 			$surface.setPointerCapture(ev.pointerId)
+			$surface.classList.add('grabbed')
 		}
 		$surface.onpointerup=ev=>{
+			$surface.classList.remove('grabbed')
 			$surface.releasePointerCapture(ev.pointerId)
 			updateHash()
 		}
