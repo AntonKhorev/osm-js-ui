@@ -109,6 +109,13 @@ export default class Map {
 			position=[x,y,z]
 			replaceTiles()
 		}
+		const mouseZoom=(ev:MouseEvent,dz:number)=>{
+			const viewHalfSizeX=$map.clientWidth/2
+			const viewHalfSizeY=$map.clientHeight/2
+			const dx=ev.offsetX-viewHalfSizeX
+			const dy=ev.offsetY-viewHalfSizeY
+			zoom(dx,dy,dz)
+		}
 
 		let moveLastX:number
 		let moveLastY:number
@@ -132,11 +139,12 @@ export default class Map {
 		$surface.onwheel=ev=>{
 			const dz=-Math.sign(ev.deltaY)
 			if (!dz) return
-			const viewHalfSizeX=$map.clientWidth/2
-			const viewHalfSizeY=$map.clientHeight/2
-			const dx=ev.offsetX-viewHalfSizeX
-			const dy=ev.offsetY-viewHalfSizeY
-			zoom(dx,dy,dz)
+			mouseZoom(ev,dz)
+			updateHash()
+		}
+		$surface.ondblclick=ev=>{
+			mouseZoom(ev,ev.shiftKey?-1:+1)
+			updateHash()
 		}
 		$surface.onkeydown=ev=>{
 			const panStepBase=32
