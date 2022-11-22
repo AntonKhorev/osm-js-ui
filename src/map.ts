@@ -95,7 +95,6 @@ export default class Map {
 				Math.min(mask,Math.max(0,(y+dy))),
 				z
 			]
-			updateHash()
 			replaceTiles()
 		}
 		const zoom=(dx:number,dy:number,dz:number)=>{
@@ -108,10 +107,16 @@ export default class Map {
 			x=Math.floor(f*x+(f-1)*dx)
 			y=Math.floor(f*y+(f-1)*dy)
 			position=[x,y,z]
-			updateHash()
 			replaceTiles()
 		}
-		$surface.onmousemove=ev=>{
+		$surface.onpointerdown=ev=>{
+			$surface.setPointerCapture(ev.pointerId)
+		}
+		$surface.onpointerup=ev=>{
+			$surface.releasePointerCapture(ev.pointerId)
+			updateHash()
+		}
+		$surface.onpointermove=ev=>{
 			if (!(ev.buttons&1)) return
 			pan(-ev.movementX,-ev.movementY)
 		}
@@ -143,6 +148,7 @@ export default class Map {
 			} else {
 				return
 			}
+			updateHash()
 			ev.stopPropagation()
 			ev.preventDefault()
 		}
