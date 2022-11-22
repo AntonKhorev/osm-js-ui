@@ -4,6 +4,8 @@ import {makeElement} from './util'
 
 const makeDiv=makeElement('div')
 
+const storagePrefix='osm-ui'
+
 main()
 
 async function main() {
@@ -37,37 +39,87 @@ async function main() {
 		}
 	}
 
-	const resizeObserver=new ResizeObserver(()=>{
-		if ($ui.clientWidth>=$ui.clientHeight) {
-			$ui.classList.remove('portrait')
-			$ui.classList.add('landscape')
+	const getOrientation=():string|undefined=>{
+		if ($ui.classList.contains('landscape')) {
+			return 'landscape'
+		} else if ($ui.classList.contains('portrait')) {
+			return 'portrait'
+		}
+	}
+	const pickSplit=<T>(vlr:T,vud:T):T|undefined=>{
+		if ($ui.classList.contains('left-right')) {
+			return vlr
+		} else if ($ui.classList.contains('up-down')) {
+			return vud
+		}
+	}
+	const getSplit=()=>pickSplit('left-right','up-down')
+	const getSidebarSize=()=>pickSplit($sidebar.clientWidth,$sidebar.clientHeight)
+	const getSidebarPercentage=()=>{
+		const sidebarSize=getSidebarSize()
+		const uiSize=pickSplit($ui.clientWidth,$ui.clientHeight)
+		if (sidebarSize==null || uiSize==null) return
+		return sidebarSize/uiSize*100
+	}
+
+	const getSidebarPercentageKey=()=>{
+		const orientation=getOrientation()
+		const split=getSplit()
+		if (orientation==null || split==null) return
+		return `${storagePrefix}-${orientation}-${split}-sidebar-percentage`
+	}
+	const restoreSidebarPercentage=()=>{
+		const storageKey=getSidebarPercentageKey()
+		if (storageKey==null) return
+		$sidebar.style.flexBasis=localStorage[storageKey]??'30%'
+	}
+	const storeSidebarPercentage=()=>{
+		const storageKey=getSidebarPercentageKey()
+		if (storageKey==null) return
+		localStorage[storageKey]=$sidebar.style.flexBasis
+	}
+	$sidebarRotate.onclick=()=>{
+		const orientation=getOrientation()
+		if (orientation==null) return
+		if ($ui.classList.contains('left-right')) {
+			$ui.classList.remove('left-right')
+			$ui.classList.add('up-down')
+			localStorage[`${storagePrefix}-${orientation}-split`]='up-down'
 		} else {
-			$ui.classList.remove('landscape')
-			$ui.classList.add('portrait')
+			$ui.classList.remove('up-down')
+			$ui.classList.add('left-right')
+			localStorage[`${storagePrefix}-${orientation}-split`]='left-right'
+		}
+		restoreSidebarPercentage()
+	}
+	const resizeObserver=new ResizeObserver(()=>{
+		const flip=(removedOrientation:string,addedOrientation:string,defaultSplit:string)=>{
+			$ui.classList.remove(removedOrientation,'left-right','up-down')
+			const storageKey=`${storagePrefix}-${addedOrientation}-split`
+			const split=localStorage[storageKey]??defaultSplit
+			$ui.classList.add(addedOrientation,split)
+			restoreSidebarPercentage()
+		}
+		if ($ui.clientWidth>=$ui.clientHeight) {
+			flip('portrait','landscape','left-right')
+		} else {
+			flip('landscape','portrait','up-down')
 		}
 	})
 	resizeObserver.observe($ui)
 
-	const pickOriented=(vLandscape:number,vPortrait:number)=>{
-		if ($ui.classList.contains('landscape')) {
-			return vLandscape
-		} else if ($ui.classList.contains('portrait')) {
-			return vPortrait
-		}
-	}
 	const startResizing=()=>{
-		const sidebarSize=pickOriented($sidebar.clientWidth,$sidebar.clientHeight)
+		const sidebarSize=getSidebarSize()
 		if (sidebarSize==null) return
 		$sidebar.style.flexBasis=sidebarSize+'px'
 		$ui.classList.add('resizing')
 	}
 	const stopResizing=()=>{
 		$ui.classList.remove('resizing')
-		const sidebarSize=pickOriented($sidebar.clientWidth,$sidebar.clientHeight)
-		const uiSize=pickOriented($ui.clientWidth,$ui.clientHeight)
-		if (sidebarSize==null || uiSize==null) return
-		const sidebarPercentSize=sidebarSize/uiSize*100
-		$sidebar.style.flexBasis=sidebarPercentSize.toFixed(4)+'%'
+		const sidebarPercentage=getSidebarPercentage()
+		if (sidebarPercentage==null) return
+		$sidebar.style.flexBasis=sidebarPercentage.toFixed(4)+'%'
+		storeSidebarPercentage()
 	}
 	$resizer.onmousedown=startResizing
 	$ui.onmouseup=ev=>{
@@ -83,8 +135,8 @@ async function main() {
 			stopResizing()
 			return
 		}
-		const sidebarSize=pickOriented($sidebar.clientWidth,$sidebar.clientHeight)
-		const dSidebarSize=pickOriented(ev.movementX,ev.movementY)
+		const sidebarSize=pickSplit($sidebar.clientWidth,$sidebar.clientHeight)
+		const dSidebarSize=pickSplit(ev.movementX,ev.movementY)
 		if (sidebarSize==null || dSidebarSize==null) return
 		$sidebar.style.flexBasis=sidebarSize+dSidebarSize+'px'
 	},true)

@@ -24,10 +24,10 @@ body > .symbols {
 	overflow: hidden;
 	flex: 0 0 auto;
 }
-.ui.landscape {
+.ui.left-right {
 	flex-direction: row;
 }
-.ui.portrait {
+.ui.up-down {
 	flex-direction: column;
 }
 .ui .resizer {
@@ -38,16 +38,12 @@ body > .symbols {
 .ui.with-sidebar.with-map .resizer {
 	display: block;
 }
-.ui.landscape .resizer {
+.ui.left-right .resizer,
+.ui.left-right.resizing {
 	cursor: col-resize;
 }
-.ui.landscape.resizing {
-	cursor: col-resize;
-}
-.ui.portrait .resizer {
-	cursor: row-resize;
-}
-.ui.portrait.resizing {
+.ui.up-down .resizer,
+.ui.up-down.resizing {
 	cursor: row-resize;
 }
 
