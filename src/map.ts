@@ -13,6 +13,10 @@ const initialLon=30.31582
 
 export default class Map {
 	constructor($map: HTMLElement) {
+		const $zoomIn=makeElement('button')()(`+`)
+		const $zoomOut=makeElement('button')()(`-`)
+		const $zoomButtons=makeDiv('buttons','zoom')($zoomIn,$zoomOut)
+
 		const $surface=makeDiv('surface')()
 		$surface.tabIndex=0
 		const $tiles=makeDiv('tiles')()
@@ -21,7 +25,7 @@ export default class Map {
 		const $attribution=makeDiv('attribution')(
 			`© `,makeLink(`OpenStreetMap contributors`,`https://www.openstreetmap.org/copyright`)
 		)
-		$map.append($surface,$tiles,$crosshair,$attribution)
+		$map.append($zoomButtons,$surface,$tiles,$crosshair,$attribution)
 
 		let position:[x:number,y:number,z:number]=calculatePosition(initialZoom,initialLat,initialLon)
 
@@ -140,6 +144,7 @@ export default class Map {
 			moveLastX=ev.clientX
 			moveLastY=ev.clientY
 		}
+
 		$surface.onwheel=ev=>{
 			const dz=-Math.sign(ev.deltaY)
 			if (!dz) return
@@ -150,6 +155,15 @@ export default class Map {
 			mouseZoom(ev,ev.shiftKey?-1:+1)
 			updateHash()
 		}
+		$zoomIn.onclick=()=>{
+			zoom(0,0,+1)
+			updateHash()
+		}
+		$zoomOut.onclick=()=>{
+			zoom(0,0,-1)
+			updateHash()
+		}
+
 		$surface.onkeydown=ev=>{
 			const panStepBase=32
 			const multiplier=ev.shiftKey?3:1

@@ -17,7 +17,7 @@ async function main() {
 	const $sidebar=makeDiv('sidebar')($sidebarButtons)
 	new Sidebar($sidebar,$sidebarHeading)
 	const $mapClose=makeElement('button')()(`Close map`)
-	const $mapButtons=makeDiv('buttons')($mapClose)
+	const $mapButtons=makeDiv('buttons','size')($mapClose)
 	const $map=makeDiv('map')($mapButtons)
 	new Map($map)
 	const $resizer=makeDiv('resizer')()

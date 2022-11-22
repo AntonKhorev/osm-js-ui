@@ -78,6 +78,10 @@ body > .symbols {
 	position: absolute;
 	z-index: 1;
 }
+.ui .map .buttons.zoom {
+	right: 0;
+	flex-direction: column;
+}
 .ui .map .surface {
 	position: absolute;
 	inset: 0;
