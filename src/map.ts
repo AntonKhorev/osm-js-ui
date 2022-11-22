@@ -85,6 +85,22 @@ export default class Map {
 		const resizeObserver=new ResizeObserver(replaceTiles)
 		resizeObserver.observe($map)
 
+		const zoom=(dx:number,dy:number,dz:number)=>{
+			let [x,y,z]=position
+			z+=dz
+			if (dz<0) {
+				if (z<0) return
+				x=Math.floor((x-dx)/2)
+				y=Math.floor((y-dy)/2)
+			} else {
+				if (z>maxZoom) return
+				x=Math.floor(2*x+dx)
+				y=Math.floor(2*y+dy)
+			}
+			position=[x,y,z]
+			updateHash()
+			replaceTiles()
+		}
 		$map.onmousemove=ev=>{
 			if (!(ev.buttons&1)) return
 			const [x,y,z]=position
@@ -104,20 +120,14 @@ export default class Map {
 			const viewHalfSizeY=$map.clientHeight/2
 			const dx=ev.offsetX-viewHalfSizeX
 			const dy=ev.offsetY-viewHalfSizeY
-			let [x,y,z]=position
-			z+=dz
-			if (dz<0) {
-				if (z<0) return
-				x=Math.floor((x-dx)/2)
-				y=Math.floor((y-dy)/2)
-			} else {
-				if (z>maxZoom) return
-				x=Math.floor(2*x+dx)
-				y=Math.floor(2*y+dy)
+			zoom(dx,dy,dz)
+		}
+		$map.onkeydown=ev=>{
+			if (ev.key=='+') {
+				zoom(0,0,+1)
+			} else if (ev.key=='-') {
+				zoom(0,0,-1)
 			}
-			position=[x,y,z]
-			updateHash()
-			replaceTiles()
 		}
 	}
 }
