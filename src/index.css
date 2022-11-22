@@ -78,8 +78,12 @@ body > .symbols {
 	position: absolute;
 	z-index: 1;
 }
+.ui .map .surface {
+	position: absolute;
+	inset: 0;
+}
 .ui .map .tiles {
-	position: relative;
+	position: absolute;
 	width: 0;
 	height: 0;
 	top: 50%;

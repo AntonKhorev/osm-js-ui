@@ -13,10 +13,12 @@ const initialLon=30.31582
 
 export default class Map {
 	constructor($map: HTMLElement) {
+		const $surface=makeDiv('surface')()
+		$surface.tabIndex=0
 		const $tiles=makeDiv('tiles')()
 		const $crosshair=makeDiv('crosshair')()
 		$crosshair.innerHTML=`<svg><use href="#map-crosshair" /></svg>`
-		$map.append($tiles,$crosshair)
+		$map.append($surface,$tiles,$crosshair)
 
 		let position:[x:number,y:number,z:number]=calculatePosition(initialZoom,initialLat,initialLon)
 
@@ -112,11 +114,11 @@ export default class Map {
 			updateHash()
 			replaceTiles()
 		}
-		$map.onmousemove=ev=>{
+		$surface.onmousemove=ev=>{
 			if (!(ev.buttons&1)) return
 			pan(-ev.movementX,-ev.movementY)
 		}
-		$map.onwheel=ev=>{
+		$surface.onwheel=ev=>{
 			const dz=-Math.sign(ev.deltaY)
 			if (!dz) return
 			const viewHalfSizeX=$map.clientWidth/2
@@ -125,7 +127,7 @@ export default class Map {
 			const dy=ev.offsetY-viewHalfSizeY
 			zoom(dx,dy,dz)
 		}
-		$map.onkeydown=ev=>{
+		$surface.onkeydown=ev=>{
 			const step=32
 			if (ev.key=='ArrowLeft') {
 				pan(-step,0)

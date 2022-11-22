@@ -19,7 +19,6 @@ async function main() {
 	const $mapClose=makeElement('button')()(`Close map`)
 	const $mapButtons=makeDiv('buttons')($mapClose)
 	const $map=makeDiv('map')($mapButtons)
-	$map.tabIndex=0
 	new Map($map)
 	const $resizer=makeDiv('resizer')()
 	const $ui=makeDiv('ui','with-sidebar','with-map')($sidebar,$resizer,$map)
