@@ -109,7 +109,12 @@ export default class Map {
 			position=[x,y,z]
 			replaceTiles()
 		}
+
+		let moveLastX:number
+		let moveLastY:number
 		$surface.onpointerdown=ev=>{
+			moveLastX=ev.clientX
+			moveLastY=ev.clientY
 			$surface.setPointerCapture(ev.pointerId)
 		}
 		$surface.onpointerup=ev=>{
@@ -118,7 +123,11 @@ export default class Map {
 		}
 		$surface.onpointermove=ev=>{
 			if (!(ev.buttons&1)) return
-			pan(-ev.movementX,-ev.movementY)
+			if (moveLastX!=null && moveLastY!=null) {
+				pan(moveLastX-ev.clientX,moveLastY-ev.clientY)
+			}
+			moveLastX=ev.clientX
+			moveLastY=ev.clientY
 		}
 		$surface.onwheel=ev=>{
 			const dz=-Math.sign(ev.deltaY)
