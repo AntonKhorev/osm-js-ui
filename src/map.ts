@@ -13,9 +13,9 @@ const initialLon=30.31582
 
 export default class Map {
 	constructor($map: HTMLElement) {
-		const $zoomIn=makeElement('button')()(`+`)
-		const $zoomOut=makeElement('button')()(`-`)
-		const $zoomButtons=makeDiv('buttons','zoom')($zoomIn,$zoomOut)
+		const $zoomIn=makeElement('button')('zoom-in')(`+`)
+		const $zoomOut=makeElement('button')('zoom-out')(`-`)
+		const $zoomButtons=makeDiv('buttons','controls')($zoomIn,$zoomOut)
 
 		const $surface=makeDiv('surface')()
 		$surface.tabIndex=0
