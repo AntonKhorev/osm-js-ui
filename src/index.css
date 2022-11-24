@@ -76,7 +76,7 @@ body > .symbols {
 .ui .sidebar .buttons button {
 	border: none;
 	background: none;
-	padding: 1px;
+	padding: 4px;
 }
 .ui .sidebar .lead.outer {
 	position: absolute;
