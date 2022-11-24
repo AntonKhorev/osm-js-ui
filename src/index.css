@@ -51,6 +51,7 @@ body > .symbols {
 }
 
 .ui .sidebar {
+	--lead-offset: calc(var(--gap)*2 + var(--button-size));
 	display: none;
 	flex: 0 0 30%;
 	position: relative;
@@ -61,9 +62,23 @@ body > .symbols {
 .ui.with-sidebar .sidebar {
 	display: block;
 }
-.ui .sidebar main {
+.ui .sidebar .lead.outer {
 	position: absolute;
-	inset: calc(var(--gap)*2 + var(--button-size)) 0 0;
+	top: 0;
+	left: var(--lead-offset);
+	right: var(--lead-offset);
+	min-height: var(--lead-offset);
+}
+.ui .sidebar .lead h1 {
+	margin-top: 0;
+}
+.ui .sidebar .lead.outer h1 {
+	margin-bottom: 0;
+}
+.ui .sidebar .content {
+	position: absolute;
+	inset: var(--lead-offset) 0 0;
+	overflow-y: scroll;
 }
 
 .ui .map {
