@@ -64,6 +64,7 @@ body > .symbols {
 }
 .ui .sidebar .lead.outer {
 	position: absolute;
+	z-index: 1;
 	top: 0;
 	left: var(--lead-offset);
 	right: var(--lead-offset);
