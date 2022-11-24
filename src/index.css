@@ -70,10 +70,26 @@ body > .symbols {
 	min-height: var(--lead-offset);
 }
 .ui .sidebar .lead h1 {
-	margin-top: 0;
+	margin-top: var(--gap);
+	font-size: var(--button-size);
+	line-height: var(--button-size);
 }
 .ui .sidebar .lead.outer h1 {
 	margin-bottom: 0;
+}
+.ui .sidebar .lead.outer.shrunk h1 {
+	visibility: hidden;
+	font-weight: bold;
+}
+.ui .sidebar .lead.outer .shrunk-heading {
+	--number-of-lines: 2;
+	--line-height: calc(var(--button-size) / var(--number-of-lines));
+	position: absolute;
+	bottom: var(--gap);
+	left: 0;
+	right: 0;
+	font-size: var(--line-height);
+	line-height: var(--line-height);
 }
 .ui .sidebar .content {
 	position: absolute;

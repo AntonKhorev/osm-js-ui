@@ -4,7 +4,8 @@ const makeDiv=makeElement('div')
 
 export default class Sidebar {
 	constructor($sidebar: HTMLElement) {
-		const $outerLeadPlaceholder=makeDiv('lead','outer')()
+		const $shrunkHeading=makeDiv('shrunk-heading')()
+		const $outerLeadPlaceholder=makeDiv('lead','outer')($shrunkHeading)
 		const $innerLeadPlaceholder=makeDiv('lead','inner')()
 		const $content=makeDiv('content')($innerLeadPlaceholder)
 		$sidebar.append($outerLeadPlaceholder,$content)
@@ -18,16 +19,26 @@ export default class Sidebar {
 		let isInnerHeading:boolean|undefined
 		const updateLeadPlaceholdersOffset=()=>{
 			const outerLeadHeight=$outerLeadPlaceholder.clientHeight
-			// const removeScrollOffset=()=>$outerLeadPlaceholder.style.removeProperty('marginTop') // doesn't work for some reason
-			const removeScrollOffset=()=>$outerLeadPlaceholder.style.marginTop='0'
+			const removeScrollOffset=()=>$outerLeadPlaceholder.style.removeProperty('translate')
 			if (isInnerHeading==false) {
 				const leadHeightDiff=outerLeadHeight-outerLeadMinHeight
 				const scrollHeight=$content.scrollTop
 				const scrollTopOffset=Math.min(leadHeightDiff,scrollHeight)
 				if (scrollTopOffset<=0) {
+					$outerLeadPlaceholder.classList.remove('shrunk')
 					removeScrollOffset()
 				} else {
-					$outerLeadPlaceholder.style.marginTop=-scrollTopOffset+'px'
+					$outerLeadPlaceholder.style.translate=`0 ${-scrollTopOffset}px`
+					if (scrollTopOffset<leadHeightDiff) {
+						$outerLeadPlaceholder.classList.remove('shrunk')
+						$shrunkHeading.replaceChildren()
+					} else {
+						$outerLeadPlaceholder.classList.add('shrunk')
+						$shrunkHeading.replaceChildren()
+						for (const $node of $heading.childNodes) {
+							$shrunkHeading.append($node.cloneNode(true))
+						}
+					}
 				}
 			} else if (isInnerHeading==true) {
 				removeScrollOffset()
@@ -45,7 +56,7 @@ export default class Sidebar {
 			} else {
 				if (isInnerHeading!=false) {
 					isInnerHeading=false
-					$outerLeadPlaceholder.append($heading)
+					$outerLeadPlaceholder.prepend($heading)
 				}
 				const outerLeadHeight=$outerLeadPlaceholder.clientHeight
 				const leadHeightDiff=outerLeadHeight-outerLeadMinHeight
