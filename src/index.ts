@@ -3,14 +3,19 @@ import Map from './map'
 import {makeElement} from './util'
 
 const makeDiv=makeElement('div')
+const makeButton=(cls:string,title:string)=>{
+	const $button=makeElement('button')(cls)()
+	$button.innerHTML=`<svg><title>${title}</title><use href="#button-${cls}" /></svg>`
+	return $button
+}
 
 const storagePrefix='osm-ui'
 
 main()
 
 async function main() {
-	const $openMenu=makeElement('button')('menu')(`Open sidebar menu`)
-	const $closeSidebar=makeElement('button')('close')(`Close sidebar`)
+	const $openMenu=makeButton('menu',`Open sidebar menu`)
+	const $closeSidebar=makeButton('close',`Close sidebar`)
 	const $splitUi=makeElement('button')('split')(`Enable split view`)
 	const $resizeUi=makeElement('button')('resize')(`Resize sidebar and map`)
 	const $rotateUi=makeElement('button')('rotate')(`Rotate sidebar and map`)
