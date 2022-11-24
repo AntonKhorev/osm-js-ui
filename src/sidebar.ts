@@ -11,7 +11,7 @@ export default class Sidebar {
 		$sidebar.append($outerLeadPlaceholder,$content)
 
 		const $heading=makeElement('h1')()(
-			`Temporary sidebar title that has to be looooong enough`
+			`Temporary sidebar title that has to be looooong enough. I want it to take at least three lines when shrunk.`
 		)
 
 		const outerLeadWidthBoundary=240

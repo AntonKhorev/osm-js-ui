@@ -82,14 +82,21 @@ body > .symbols {
 	font-weight: bold;
 }
 .ui .sidebar .lead.outer .shrunk-heading {
+	--descender-height: 2px;
 	--number-of-lines: 2;
 	--line-height: calc(var(--button-size) / var(--number-of-lines));
 	position: absolute;
-	bottom: var(--gap);
+	padding-bottom: var(--descender-height);
+	bottom: calc(var(--gap) - var(--descender-height));
 	left: 0;
 	right: 0;
 	font-size: var(--line-height);
 	line-height: var(--line-height);
+	font-weight: bold;
+	overflow: hidden;
+	-webkit-line-clamp: var(--number-of-lines);
+	display: -webkit-box; /* display: flex; */
+	-webkit-box-orient: vertical; /* flex-direction: column; */
 }
 .ui .sidebar .content {
 	position: absolute;
