@@ -77,9 +77,8 @@ body > .symbols {
 .ui .sidebar .lead.outer h1 {
 	margin-bottom: 0;
 }
-.ui .sidebar .lead.outer.shrunk h1 {
+.ui .sidebar .lead.outer .shrunk-heading:not(:empty) ~ h1 {
 	visibility: hidden;
-	font-weight: bold;
 }
 .ui .sidebar .lead.outer .shrunk-heading {
 	--descender-height: 2px;

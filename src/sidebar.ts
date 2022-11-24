@@ -18,11 +18,10 @@ export default class Sidebar {
 		const outerLeadMinHeight=48 // --lead-offset
 		let isInnerHeading:boolean|undefined
 		const hideShrunkHeading=()=>{
-			$outerLeadPlaceholder.classList.remove('shrunk')
 			$shrunkHeading.replaceChildren()
 		}
 		const showShrunkHeading=()=>{
-			$outerLeadPlaceholder.classList.add('shrunk')
+			if ($shrunkHeading.hasChildNodes()) return
 			$shrunkHeading.replaceChildren()
 			for (const $node of $heading.childNodes) {
 				$shrunkHeading.append($node.cloneNode(true))
@@ -63,7 +62,7 @@ export default class Sidebar {
 			} else {
 				if (isInnerHeading!=false) {
 					isInnerHeading=false
-					$outerLeadPlaceholder.prepend($heading)
+					$outerLeadPlaceholder.append($heading)
 				}
 				const outerLeadHeight=$outerLeadPlaceholder.clientHeight
 				const leadHeightDiff=outerLeadHeight-outerLeadMinHeight
