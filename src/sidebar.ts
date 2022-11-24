@@ -10,31 +10,56 @@ export default class Sidebar {
 		$sidebar.append($outerLeadPlaceholder,$content)
 
 		const $heading=makeElement('h1')()(
-			`Temporary sidebar title`
+			`Temporary sidebar title that has to be looooong enough`
 		)
 
 		const outerLeadWidthBoundary=240
-		let outerLeadMinHeight:number|undefined
-		const outerLeadResizeObserver=new ResizeObserver(()=>{
+		const outerLeadMinHeight=48 // --lead-offset
+		let isInnerHeading:boolean|undefined
+		const updateLeadPlaceholdersOffset=()=>{
 			const outerLeadHeight=$outerLeadPlaceholder.clientHeight
-			if (outerLeadMinHeight==null) {
-				outerLeadMinHeight=outerLeadHeight
+			// const removeScrollOffset=()=>$outerLeadPlaceholder.style.removeProperty('marginTop') // doesn't work for some reason
+			const removeScrollOffset=()=>$outerLeadPlaceholder.style.marginTop='0'
+			if (isInnerHeading==false) {
+				const leadHeightDiff=outerLeadHeight-outerLeadMinHeight
+				const scrollHeight=$content.scrollTop
+				const scrollTopOffset=Math.min(leadHeightDiff,scrollHeight)
+				if (scrollTopOffset<=0) {
+					removeScrollOffset()
+				} else {
+					$outerLeadPlaceholder.style.marginTop=-scrollTopOffset+'px'
+				}
+			} else if (isInnerHeading==true) {
+				removeScrollOffset()
 			}
+		}
+		const updateLeadPlaceholdersContents=()=>{
 			const outerLeadWidth=$outerLeadPlaceholder.clientWidth
+			const removeInnerLeadHeight=()=>$innerLeadPlaceholder.style.removeProperty('height')
 			if (outerLeadWidth<outerLeadWidthBoundary) {
-				$innerLeadPlaceholder.style.removeProperty('height')
-				$innerLeadPlaceholder.append($heading)
+				if (isInnerHeading!=true) {
+					isInnerHeading=true
+					removeInnerLeadHeight()
+					$innerLeadPlaceholder.append($heading)
+				}
 			} else {
-				$outerLeadPlaceholder.append($heading)
+				if (isInnerHeading!=false) {
+					isInnerHeading=false
+					$outerLeadPlaceholder.append($heading)
+				}
+				const outerLeadHeight=$outerLeadPlaceholder.clientHeight
 				const leadHeightDiff=outerLeadHeight-outerLeadMinHeight
 				if (leadHeightDiff>0) {
 					$innerLeadPlaceholder.style.height=leadHeightDiff+'px'
 				} else {
-					$innerLeadPlaceholder.style.removeProperty('height')
+					removeInnerLeadHeight()
 				}
 			}
-		})
+			updateLeadPlaceholdersOffset()
+		}
+		const outerLeadResizeObserver=new ResizeObserver(updateLeadPlaceholdersContents)
 		outerLeadResizeObserver.observe($outerLeadPlaceholder)
+		$content.onscroll=updateLeadPlaceholdersOffset
 
 		for (let i=0;i<30;i++) {
 			$content.append(makeElement('p')()(
