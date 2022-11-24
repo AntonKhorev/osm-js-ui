@@ -17,6 +17,17 @@ export default class Sidebar {
 		const outerLeadWidthBoundary=240
 		const outerLeadMinHeight=48 // --lead-offset
 		let isInnerHeading:boolean|undefined
+		const hideShrunkHeading=()=>{
+			$outerLeadPlaceholder.classList.remove('shrunk')
+			$shrunkHeading.replaceChildren()
+		}
+		const showShrunkHeading=()=>{
+			$outerLeadPlaceholder.classList.add('shrunk')
+			$shrunkHeading.replaceChildren()
+			for (const $node of $heading.childNodes) {
+				$shrunkHeading.append($node.cloneNode(true))
+			}
+		}
 		const updateLeadPlaceholdersOffset=()=>{
 			const outerLeadHeight=$outerLeadPlaceholder.clientHeight
 			const removeScrollOffset=()=>$outerLeadPlaceholder.style.removeProperty('translate')
@@ -25,23 +36,19 @@ export default class Sidebar {
 				const scrollHeight=$content.scrollTop
 				const scrollTopOffset=Math.min(leadHeightDiff,scrollHeight)
 				if (scrollTopOffset<=0) {
-					$outerLeadPlaceholder.classList.remove('shrunk')
 					removeScrollOffset()
+					hideShrunkHeading()
 				} else {
 					$outerLeadPlaceholder.style.translate=`0 ${-scrollTopOffset}px`
 					if (scrollTopOffset<leadHeightDiff) {
-						$outerLeadPlaceholder.classList.remove('shrunk')
-						$shrunkHeading.replaceChildren()
+						hideShrunkHeading()
 					} else {
-						$outerLeadPlaceholder.classList.add('shrunk')
-						$shrunkHeading.replaceChildren()
-						for (const $node of $heading.childNodes) {
-							$shrunkHeading.append($node.cloneNode(true))
-						}
+						showShrunkHeading()
 					}
 				}
 			} else if (isInnerHeading==true) {
 				removeScrollOffset()
+				hideShrunkHeading()
 			}
 		}
 		const updateLeadPlaceholdersContents=()=>{
