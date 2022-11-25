@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-8 -12 20 24">
+<g fill="currentColor">
+<circle r="1" cx="-3" cy="-9" />
+<circle r="1" cx="+3" cy="-9" />
+<circle r="1" cx="+9" cy="-9" />
+<circle r="1" cx="-3" cy="-3" />
+<circle r="1" cx="+3" cy="-3" />
+<circle r="1" cx="+9" cy="-3" />
+<circle r="1" cx="-3" cy="+3" />
+<circle r="1" cx="+3" cy="+3" />
+<circle r="1" cx="+9" cy="+3" />
+<circle r="1" cx="-3" cy="+9" />
+<circle r="1" cx="+3" cy="+9" />
+<circle r="1" cx="+9" cy="+9" />
+</g>
+</svg>

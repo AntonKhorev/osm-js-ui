@@ -41,12 +41,6 @@ body > .symbols {
 .ui .buttons.top button.close {
 	right: var(--gap);
 }
-.ui .buttons.top button.resize {
-	left: 0;
-}
-.ui .buttons.top button.rotate {
-	left: var(--button-size);
-}
 
 .ui.left-right {
 	flex-direction: row;
@@ -128,6 +122,26 @@ body > .symbols {
 }
 .ui.with-map .map {
 	display: block;
+}
+.ui .map .buttons button {
+	border: 1px solid;
+	padding: 3px;
+	background: #FFFC;
+}
+.ui .buttons.top button.resize {
+	left: 0;
+	width: 24px;
+	border-left: 0;
+	padding-left: 0;
+	border-radius: 0;
+}
+.ui .buttons.top button.rotate {
+	left: 24px;
+	width: 16px;
+	border-left: 0;
+	padding-left: 0;
+	border-top-left-radius: 0;
+	border-bottom-left-radius: 0;
 }
 .ui .map .buttons.controls {
 	display: flex;
