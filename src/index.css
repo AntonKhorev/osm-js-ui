@@ -133,13 +133,12 @@ body > .symbols {
 	width: 24px;
 	border-left: 0;
 	padding-left: 0;
+	border-right: 0;
+	padding-right: 1px;
 	border-radius: 0;
 }
 .ui .buttons.top button.rotate {
 	left: 24px;
-	width: 16px;
-	border-left: 0;
-	padding-left: 0;
 	border-top-left-radius: 0;
 	border-bottom-left-radius: 0;
 }
