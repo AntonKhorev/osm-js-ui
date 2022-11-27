@@ -41,6 +41,12 @@ body > .symbols {
 .ui .buttons.top button.close {
 	right: var(--gap);
 }
+.ui.left-right .buttons.top button.rotate {
+	--button-rotate-left-right-part-visibility: visible;
+}
+.ui.up-down .buttons.top button.rotate {
+	--button-rotate-up-down-part-visibility: visible;
+}
 
 .ui.left-right {
 	flex-direction: row;
