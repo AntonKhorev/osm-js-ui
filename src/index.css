@@ -42,10 +42,20 @@ body > .symbols {
 	right: var(--gap);
 }
 .ui.left-right .buttons.top button.rotate {
-	--button-rotate-left-right-part-visibility: visible;
+	--button-layout-up-down-sidebar-part-visibility: visible;
+	--button-layout-up-down-arrow-part-visibility: visible;
 }
 .ui.up-down .buttons.top button.rotate {
-	--button-rotate-up-down-part-visibility: visible;
+	--button-layout-left-right-sidebar-part-visibility: visible;
+	--button-layout-left-right-arrow-part-visibility: visible;
+}
+.ui.left-right .buttons.top button.split {
+	--button-layout-left-right-sidebar-part-visibility: visible;
+	--button-layout-left-right-map-part-visibility: visible;
+}
+.ui.up-down .buttons.top button.split {
+	--button-layout-up-down-sidebar-part-visibility: visible;
+	--button-layout-up-down-map-part-visibility: visible;
 }
 
 .ui.left-right {

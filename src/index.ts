@@ -3,9 +3,9 @@ import Map from './map'
 import {makeElement} from './util'
 
 const makeDiv=makeElement('div')
-const makeButton=(cls:string,title:string)=>{
-	const $button=makeElement('button')(cls)()
-	$button.innerHTML=`<svg><title>${title}</title><use href="#button-${cls}" /></svg>`
+const makeButton=(title:string,href:string,cls?:string)=>{
+	const $button=makeElement('button')(cls??href)()
+	$button.innerHTML=`<svg><title>${title}</title><use href="#button-${href}" /></svg>`
 	return $button
 }
 
@@ -14,12 +14,12 @@ const storagePrefix='osm-ui'
 main()
 
 async function main() {
-	const $openMenu=makeButton('menu',`Open sidebar menu`)
-	const $closeSidebar=makeButton('close',`Close sidebar`)
-	const $splitUi=makeButton('split',`Enable split view`)
-	const $resizeUi=makeButton('resize',`Resize sidebar and map`)
-	const $rotateUi=makeButton('rotate',`Rotate sidebar and map`)
-	const $closeMap=makeButton('close',`Close map`)
+	const $openMenu=makeButton(`Open sidebar menu`,'menu')
+	const $closeSidebar=makeButton(`Close sidebar`,'close')
+	const $splitUi=makeButton(`Enable split view`,'layout','split')
+	const $resizeUi=makeButton(`Resize sidebar and map`,'resize')
+	const $rotateUi=makeButton(`Rotate sidebar and map`,'layout','rotate')
+	const $closeMap=makeButton(`Close map`,'close')
 
 	const $sidebarTopButtons=makeDiv('buttons','top')()
 	const $sidebar=makeDiv('sidebar')($sidebarTopButtons)
