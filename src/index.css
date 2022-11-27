@@ -130,15 +130,14 @@ body > .symbols {
 }
 .ui .buttons.top button.resize {
 	left: 0;
-	width: 24px;
 	border-left: 0;
-	padding-left: 0;
+	padding-left: 4px;
 	border-right: 0;
-	padding-right: 1px;
+	padding-right: 4px;
 	border-radius: 0;
 }
 .ui .buttons.top button.rotate {
-	left: 24px;
+	left: var(--button-size);
 	border-top-left-radius: 0;
 	border-bottom-left-radius: 0;
 }
