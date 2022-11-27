@@ -128,7 +128,7 @@ body > .symbols {
 	padding: 3px;
 	background: #FFFC;
 }
-.ui .buttons.top button.resize {
+.ui.left-right .buttons.top button.resize {
 	left: 0;
 	border-left: 0;
 	padding-left: 4px;
@@ -136,10 +136,25 @@ body > .symbols {
 	padding-right: 4px;
 	border-radius: 0;
 }
-.ui .buttons.top button.rotate {
+.ui.up-down .buttons.top button.resize {
+	left: var(--gap);
+	top: 0;
+	border-top: 0;
+	padding-top: 4px;
+	border-bottom: 0;
+	padding-bottom: 4px;
+	border-radius: 0;
+}
+.ui.left-right .buttons.top button.rotate {
 	left: var(--button-size);
 	border-top-left-radius: 0;
 	border-bottom-left-radius: 0;
+}
+.ui.up-down .buttons.top button.rotate {
+	left: var(--gap);
+	top: var(--button-size);
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
 }
 .ui .map .buttons.controls {
 	display: flex;
