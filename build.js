@@ -64,7 +64,7 @@ function getEmbeddedSvg(id,input) {
 		} else if (match=line.match(/^<\/svg>$/)) {
 			symbol+=`</symbol>\n`
 			break
-		} else if (match=line.match(/^<g class="([^"]*)">$/)) {
+		} else if (match=line.match(/^<g class="([^"]*)"/)) {
 			const [,partClass]=match
 			const visibility=(partClass=='default'?'visible':'hidden')
 			style+=`#${id} .${partClass} { visibility: var(--${id}-${partClass}-part-visibility,${visibility}); }\n`
