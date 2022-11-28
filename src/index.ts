@@ -1,13 +1,6 @@
 import Sidebar from './sidebar'
 import Map from './map'
-import {makeElement} from './util'
-
-const makeDiv=makeElement('div')
-const makeButton=(title:string,href:string,cls?:string)=>{
-	const $button=makeElement('button')(cls??href)()
-	$button.innerHTML=`<svg><title>${title}</title><use href="#button-${href}" /></svg>`
-	return $button
-}
+import {makeDiv, makeButton} from './util'
 
 const storagePrefix='osm-ui'
 

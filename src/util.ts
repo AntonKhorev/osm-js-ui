@@ -17,6 +17,14 @@ export function makeElement<K extends keyof HTMLElementTagNameMap>(tag: K): ((..
 	}
 }
 
+export const makeDiv=makeElement('div')
+
+export function makeButton(title:string,href:string,cls?:string) {
+	const $button=makeElement('button')(cls??href)()
+	$button.innerHTML=`<svg><title>${title}</title><use href="#button-${href}" /></svg>`
+	return $button
+}
+
 export function makeLink(text: string, href: string): HTMLAnchorElement {
 	const $link=document.createElement('a')
 	$link.href=href

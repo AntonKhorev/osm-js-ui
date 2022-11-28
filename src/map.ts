@@ -1,6 +1,5 @@
-import {makeEscapeTag, makeElement, makeLink} from './util'
+import {makeEscapeTag, makeDiv, makeButton, makeLink} from './util'
 
-const makeDiv=makeElement('div')
 const e=makeEscapeTag(encodeURIComponent)
 
 const tileSize=256
@@ -13,8 +12,8 @@ const initialLon=30.31582
 
 export default class Map {
 	constructor($map: HTMLElement) {
-		const $zoomIn=makeElement('button')('zoom-in')(`+`)
-		const $zoomOut=makeElement('button')('zoom-out')(`-`)
+		const $zoomIn=makeButton(`Zoom in`,'zoom-in')
+		const $zoomOut=makeButton(`Zoom out`,'zoom-out')
 		const $zoomButtons=makeDiv('buttons','controls')($zoomIn,$zoomOut)
 
 		const $surface=makeDiv('surface')()

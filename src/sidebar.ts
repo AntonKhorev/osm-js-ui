@@ -1,6 +1,4 @@
-import {makeElement} from './util'
-
-const makeDiv=makeElement('div')
+import {makeElement, makeDiv} from './util'
 
 export default class Sidebar {
 	constructor($sidebar: HTMLElement) {
