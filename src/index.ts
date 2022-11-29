@@ -121,37 +121,55 @@ async function main() {
 	}
 	const getSplit=()=>pickSplit('left-right','up-down')
 	const getSidebarSize=()=>pickSplit($sidebar.clientWidth,$sidebar.clientHeight)
-	const getSidebarPercentage=()=>{
-		const sidebarSize=getSidebarSize()
+	const getSidebarPercentage=(sidebarSize:number|undefined)=>{
 		const uiSize=pickSplit($ui.clientWidth,$ui.clientHeight)
 		if (sidebarSize==null || uiSize==null) return
 		return sidebarSize/uiSize*100
 	}
-	let resizing=false
+
+	let moveStartOffset:number|undefined
 	$resizeUi.onpointerdown=ev=>{
 		const sidebarSize=getSidebarSize()
-		if (sidebarSize==null) return
+		const pointerPosition=pickSplit(ev.clientX,ev.clientY)
+		if (sidebarSize==null || pointerPosition==null) return
+		moveStartOffset=pointerPosition-sidebarSize
 		$sidebar.style.flexBasis=sidebarSize+'px' // TODO maybe update only in move listener
 		$resizeUi.setPointerCapture(ev.pointerId)
-		// $ui.classList.add('resizing')
-		resizing=true
 	}
 	$resizeUi.onpointerup=ev=>{
-		resizing=false
-		// $ui.classList.remove('resizing')
 		$resizeUi.releasePointerCapture(ev.pointerId)
-		const sidebarPercentage=getSidebarPercentage()
+		moveStartOffset=undefined
+		const sidebarPercentage=getSidebarPercentage(getSidebarSize())
 		if (sidebarPercentage==null) return
 		$sidebar.style.flexBasis=sidebarPercentage.toFixed(4)+'%'
 		storeSidebarPercentage()
 	}
 	$resizeUi.onpointermove=ev=>{
-		if (!resizing) return
-		// if (!$ui.classList.contains('resizing')) return
-		const sidebarSize=pickSplit($sidebar.clientWidth,$sidebar.clientHeight)
-		const dSidebarSize=pickSplit(ev.movementX,ev.movementY)
-		if (sidebarSize==null || dSidebarSize==null) return
-		$sidebar.style.flexBasis=sidebarSize+dSidebarSize+'px'
+		if (moveStartOffset==null) return
+		const pointerPosition=pickSplit(ev.clientX,ev.clientY)
+		if (pointerPosition==null) return
+		const newSidebarSize=pointerPosition-moveStartOffset
+		$sidebar.style.flexBasis=newSidebarSize+'px'
+	}
+	$resizeUi.onkeydown=ev=>{
+		const stepBase=8
+		const sidebarSize=getSidebarSize()
+		if (sidebarSize==null) return
+		let step:number|undefined
+		if (ev.key=='ArrowLeft' || ev.key=='ArrowUp') {
+			step=-stepBase
+		} else if (ev.key=='ArrowRight' || ev.key=='ArrowDown') {
+			step=+stepBase
+		} else {
+			return
+		}
+		if (step==null) return
+		const sidebarPercentage=getSidebarPercentage(sidebarSize+step)
+		if (sidebarPercentage==null) return
+		$sidebar.style.flexBasis=sidebarPercentage.toFixed(4)+'%'
+		storeSidebarPercentage()
+		ev.stopPropagation()
+		ev.preventDefault()
 	}
 
 	const resizeObserver=new ResizeObserver(()=>{
