@@ -74,87 +74,77 @@ async function main() {
 		updateTopButtons()
 	}
 
-	const getSidebarPercentageKey=()=>{
+	const getOrientation=()=>$ui.classList.contains('portrait')?'portrait':'landscape'
+	const pickSplit=<T>(vlr:T,vud:T):T=>$ui.classList.contains('up-down')?vud:vlr
+	const getSplit=()=>pickSplit('left-right','up-down')
+	const getSidebarFractionKey=():string=>{
 		const orientation=getOrientation()
 		const split=getSplit()
-		if (orientation==null || split==null) return
-		return `${storagePrefix}-${orientation}-${split}-sidebar-percentage`
+		return `${storagePrefix}-${orientation}-${split}-sidebar-fraction`
 	}
-	const restoreSidebarPercentage=()=>{
-		const storageKey=getSidebarPercentageKey()
-		if (storageKey==null) return
-		$sidebar.style.flexBasis=localStorage[storageKey]??'30%'
+
+	const getSidebarSize=()=>pickSplit($sidebar.clientWidth,$sidebar.clientHeight)
+	const setPaneSizes=(sidebarFraction:number):void=>{
+		const magnitude=100000
+		const sidebarGrow=Math.round(sidebarFraction*magnitude)
+		const mapGrow=magnitude-sidebarGrow
+		$sidebar.style.flexGrow=String(sidebarGrow)
+		$map.style.flexGrow=String(mapGrow)
 	}
-	const storeSidebarPercentage=()=>{
-		const storageKey=getSidebarPercentageKey()
-		if (storageKey==null) return
-		localStorage[storageKey]=$sidebar.style.flexBasis
+	const restorePaneSizes=():void=>{
+		const storageKey=getSidebarFractionKey()
+		const sidebarFraction=parseFloat(localStorage[storageKey]??'0.5')
+		setPaneSizes(sidebarFraction)
+	}
+	const storePaneSizes=():void=>{
+		const storageKey=getSidebarFractionKey()
+		const sidebarGrow=parseFloat($sidebar.style.flexGrow)
+		const mapGrow=parseFloat($map.style.flexGrow)
+		localStorage[storageKey]=sidebarGrow/(sidebarGrow+mapGrow)
 	}
 	$rotateUi.onclick=()=>{
 		const orientation=getOrientation()
-		if (orientation==null) return
-		if ($ui.classList.contains('left-right')) {
-			$ui.classList.remove('left-right')
-			$ui.classList.add('up-down')
-			localStorage[`${storagePrefix}-${orientation}-split`]='up-down'
-		} else {
+		if ($ui.classList.contains('up-down')) {
 			$ui.classList.remove('up-down')
 			$ui.classList.add('left-right')
 			localStorage[`${storagePrefix}-${orientation}-split`]='left-right'
+		} else {
+			$ui.classList.remove('left-right')
+			$ui.classList.add('up-down')
+			localStorage[`${storagePrefix}-${orientation}-split`]='up-down'
 		}
-		restoreSidebarPercentage()
+		restorePaneSizes()
 	}
 
-	const getOrientation=():string|undefined=>{
-		if ($ui.classList.contains('landscape')) {
-			return 'landscape'
-		} else if ($ui.classList.contains('portrait')) {
-			return 'portrait'
-		}
-	}
-	const pickSplit=<T>(vlr:T,vud:T):T|undefined=>{
-		if ($ui.classList.contains('left-right')) {
-			return vlr
-		} else if ($ui.classList.contains('up-down')) {
-			return vud
-		}
-	}
-	const getSplit=()=>pickSplit('left-right','up-down')
-	const getSidebarSize=()=>pickSplit($sidebar.clientWidth,$sidebar.clientHeight)
-	const getSidebarPercentage=(sidebarSize:number|undefined)=>{
+	const calculateSidebarFraction=(sidebarSize:number):number=>{
 		const uiSize=pickSplit($ui.clientWidth,$ui.clientHeight)
-		if (sidebarSize==null || uiSize==null) return
-		return sidebarSize/uiSize*100
+		const sidebarBasis=parseInt(getComputedStyle($sidebar).flexBasis)
+		const mapBasis=parseInt(getComputedStyle($sidebar).flexBasis)
+		const sidebarFraction=(sidebarSize-sidebarBasis)/(uiSize-sidebarBasis-mapBasis)
+		if (sidebarFraction<0) return 0
+		if (sidebarFraction>1) return 1
+		return sidebarFraction
 	}
-
 	let moveStartOffset:number|undefined
 	$resizeUi.onpointerdown=ev=>{
 		const sidebarSize=getSidebarSize()
 		const pointerPosition=pickSplit(ev.clientX,ev.clientY)
-		if (sidebarSize==null || pointerPosition==null) return
 		moveStartOffset=pointerPosition-sidebarSize
-		$sidebar.style.flexBasis=sidebarSize+'px' // TODO maybe update only in move listener
 		$resizeUi.setPointerCapture(ev.pointerId)
 	}
 	$resizeUi.onpointerup=ev=>{
 		$resizeUi.releasePointerCapture(ev.pointerId)
 		moveStartOffset=undefined
-		const sidebarPercentage=getSidebarPercentage(getSidebarSize())
-		if (sidebarPercentage==null) return
-		$sidebar.style.flexBasis=sidebarPercentage.toFixed(4)+'%'
-		storeSidebarPercentage()
+		storePaneSizes()
 	}
 	$resizeUi.onpointermove=ev=>{
 		if (moveStartOffset==null) return
 		const pointerPosition=pickSplit(ev.clientX,ev.clientY)
-		if (pointerPosition==null) return
-		const newSidebarSize=pointerPosition-moveStartOffset
-		$sidebar.style.flexBasis=newSidebarSize+'px'
+		const sidebarFraction=calculateSidebarFraction(pointerPosition-moveStartOffset)
+		setPaneSizes(sidebarFraction)
 	}
 	$resizeUi.onkeydown=ev=>{
 		const stepBase=8
-		const sidebarSize=getSidebarSize()
-		if (sidebarSize==null) return
 		let step:number|undefined
 		if (ev.key=='ArrowLeft' || ev.key=='ArrowUp') {
 			step=-stepBase
@@ -164,10 +154,9 @@ async function main() {
 			return
 		}
 		if (step==null) return
-		const sidebarPercentage=getSidebarPercentage(sidebarSize+step)
-		if (sidebarPercentage==null) return
-		$sidebar.style.flexBasis=sidebarPercentage.toFixed(4)+'%'
-		storeSidebarPercentage()
+		const sidebarFraction=calculateSidebarFraction(getSidebarSize()+step)
+		setPaneSizes(sidebarFraction)
+		storePaneSizes()
 		ev.stopPropagation()
 		ev.preventDefault()
 	}
@@ -184,7 +173,7 @@ async function main() {
 		} else {
 			flip('landscape','portrait','up-down')
 		}
-		restoreSidebarPercentage()
+		restorePaneSizes()
 		updateTopButtons()
 	})
 	resizeObserver.observe($ui)

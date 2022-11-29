@@ -12,6 +12,7 @@ body > .symbols {
 	display: flex;
 	--gap: 8px;
 	--button-size: 32px;
+	--pane-min-size: calc(var(--button-size)*3);
 }
 .ui .buttons button {
 	z-index: 1;
@@ -71,14 +72,15 @@ body > .symbols {
 	cursor: row-resize;
 }
 
+.ui .map,
+.ui .sidebar {
+	display: none;
+	flex: 1 1 var(--pane-min-size);
+	position: relative;
+}
+
 .ui .sidebar {
 	--lead-offset: calc(var(--gap)*2 + var(--button-size));
-	--min-size: calc(var(--gap)*3 + var(--button-size)*2);
-	display: none;
-	flex: 0 0 30%;
-	position: relative;
-	min-width: var(--min-size);
-	min-height: var(--min-size);
 }
 .ui:not(.with-map) .sidebar {
 	flex-grow: 1;
@@ -134,13 +136,7 @@ body > .symbols {
 }
 
 .ui .map {
-	--min-size: calc(var(--gap)*3 + var(--button-size)*2);
-	display: none;
-	flex: 1 1 auto;
-	position: relative;
 	overflow: hidden;
-	min-width: var(--min-size);
-	min-height: var(--min-size);
 }
 .ui.with-map .map {
 	display: block;
