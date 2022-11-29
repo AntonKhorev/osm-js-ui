@@ -23,6 +23,24 @@ async function main() {
 	const $ui=makeDiv('ui','with-sidebar','with-map')($sidebar,$map)
 	document.body.append($ui)
 
+	const getOrientation=()=>$ui.classList.contains('portrait')?'portrait':'landscape'
+	const storePaneVisibility=():void=>{
+		const orientation=getOrientation()
+		const sidebarKey=`${storagePrefix}-${orientation}-sidebar-visible`
+		const mapKey=`${storagePrefix}-${orientation}-map-visible`
+		localStorage[sidebarKey]=$ui.classList.contains('with-sidebar')?'1':''
+		localStorage[mapKey]=$ui.classList.contains('with-map')?'1':''
+	}
+	const restorePaneVisibility=():void=>{
+		const orientation=getOrientation()
+		const sidebarKey=`${storagePrefix}-${orientation}-sidebar-visible`
+		const mapKey=`${storagePrefix}-${orientation}-map-visible`
+		let withSidebar=!!localStorage[sidebarKey]
+		let withMap=!!localStorage[mapKey]
+		if (!withSidebar && !withMap) withSidebar=withMap=true
+		$ui.classList.toggle('with-sidebar',withSidebar)
+		$ui.classList.toggle('with-map',withMap)
+	}
 	const updateTopButtons=()=>{
 		const withSidebar=$ui.classList.contains('with-sidebar')
 		const withMap=$ui.classList.contains('with-map')
@@ -54,6 +72,7 @@ async function main() {
 	$openMenu.onclick=()=>{
 		if (!$ui.classList.contains('with-sidebar')) {
 			$ui.classList.add('with-sidebar')
+			storePaneVisibility()
 			updateTopButtons()
 		}
 		// TODO open menu
@@ -61,20 +80,22 @@ async function main() {
 	$splitUi.onclick=()=>{
 		$ui.classList.add('with-sidebar')
 		$ui.classList.add('with-map')
+		storePaneVisibility()
 		updateTopButtons()
 	}
 	$closeSidebar.onclick=()=>{
 		$ui.classList.remove('with-sidebar')
 		$ui.classList.add('with-map')
+		storePaneVisibility()
 		updateTopButtons()
 	}
-	$closeMap.onclick=ev=>{
+	$closeMap.onclick=()=>{
 		$ui.classList.remove('with-map')
 		$ui.classList.add('with-sidebar')
+		storePaneVisibility()
 		updateTopButtons()
 	}
 
-	const getOrientation=()=>$ui.classList.contains('portrait')?'portrait':'landscape'
 	const pickSplit=<T>(vlr:T,vud:T):T=>$ui.classList.contains('up-down')?vud:vlr
 	const getSplit=()=>pickSplit('left-right','up-down')
 	const getSidebarFractionKey=():string=>{
@@ -173,6 +194,7 @@ async function main() {
 		} else {
 			flip('landscape','portrait','up-down')
 		}
+		restorePaneVisibility()
 		restorePaneSizes()
 		updateTopButtons()
 	})
