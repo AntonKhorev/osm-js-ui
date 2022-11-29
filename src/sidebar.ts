@@ -28,9 +28,9 @@ export default class Sidebar {
 		const updateLeadPlaceholdersOffset=()=>{
 			const outerLeadHeight=$outerLeadPlaceholder.clientHeight
 			const removeScrollOffset=()=>$outerLeadPlaceholder.style.removeProperty('translate')
+			const scrollHeight=$content.scrollTop
 			if (isInnerHeading==false) {
 				const leadHeightDiff=outerLeadHeight-outerLeadMinHeight
-				const scrollHeight=$content.scrollTop
 				const scrollTopOffset=Math.min(leadHeightDiff,scrollHeight)
 				if (scrollTopOffset<=0) {
 					removeScrollOffset()
@@ -45,7 +45,11 @@ export default class Sidebar {
 				}
 			} else if (isInnerHeading==true) {
 				removeScrollOffset()
-				hideShrunkHeading()
+				if (scrollHeight<$heading.clientHeight) {
+					hideShrunkHeading()
+				} else {
+					showShrunkHeading()
+				}
 			}
 		}
 		const updateLeadPlaceholdersContents=()=>{

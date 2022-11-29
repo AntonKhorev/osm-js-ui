@@ -102,12 +102,15 @@ body > .symbols {
 	min-height: var(--lead-offset);
 }
 .ui .sidebar .lead h1 {
-	margin-top: var(--gap);
 	font-size: var(--button-size);
 	line-height: var(--button-size);
 }
 .ui .sidebar .lead.outer h1 {
+	margin-top: var(--gap);
 	margin-bottom: 0;
+}
+.ui .sidebar .lead.inner h1 {
+	margin-top: 0;
 }
 .ui .sidebar .lead.outer .shrunk-heading:not(:empty) ~ h1 {
 	visibility: hidden;
