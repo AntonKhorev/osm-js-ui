@@ -77,29 +77,51 @@ export default class Map {
 			const y1=y-Math.floor(viewSizeY/2)
 			const x2=x+Math.floor(viewSizeX/2)
 			const y2=y+Math.floor(viewSizeY/2)
+			const calculateScaleAndStep=(latOrLonSpan:number):[scale:number,step:number]=>{
+				const logSpan=Math.log10(latOrLonSpan/2)
+				const scale=Math.floor(logSpan)
+				const remainder=logSpan-scale
+				let digit=1
+				if (remainder>Math.log10(5)) {
+					digit=5
+				} else if (remainder>Math.log10(2)) {
+					digit=2
+				}
+				const step=digit*10**scale
+				return [scale,step]
+			}
 			const [,lat1,lon1]=calculateCoords(x1,y1,z)
 			const [,lat2,lon2]=calculateCoords(x2,y2,z)
-			const latLog=Math.log10((lat1-lat2)/2)
-			const latScale=Math.floor(latLog)
-			const latRemainder=latLog-latScale
-			let latDigit=1
-			if (latRemainder>Math.log10(5)) {
-				latDigit=5
-			} else if (latRemainder>Math.log10(2)) {
-				latDigit=2
-			}
-			const latStep=latDigit*10**latScale
-			const latBase=Math.ceil(lat2/latStep)*latStep
 			let svg=ex`<svg width="${viewSizeX}" height="${viewSizeY}">`
-			for (let i=0;;i++) {
-				const lati=latBase+i*latStep
-				if (lati>lat1) break
-				const yi=calculateY(z,lati)
-				const vy=yi-y1+0.5
-				svg+=ex`<line x2="${viewSizeX}" y1="${vy}" y2="${vy}" />`
-				const s=lati.toFixed(Math.max(0,-latScale))
-				const o=4;
-				svg+=ex`<text x="${0.5+o}" y="${vy-o}">${s}</text>`
+			// lat
+			{
+				const [latScale,latStep]=calculateScaleAndStep(lat1-lat2)
+				const latBase=Math.ceil(lat2/latStep)*latStep
+				for (let i=0;;i++) {
+					const lati=latBase+i*latStep
+					if (lati>lat1) break
+					const yi=calculateY(z,lati)
+					const vy=yi-y1+0.5
+					svg+=ex`<line x2="${viewSizeX}" y1="${vy}" y2="${vy}" />`
+					const s=lati.toFixed(Math.max(0,-latScale))
+					const o=4;
+					svg+=ex`<text x="${0.5+o}" y="${vy-o}">${s}</text>`
+				}
+			}
+			// lon
+			{
+				const [lonScale,lonStep]=calculateScaleAndStep(lon2-lon1) // TODO handle wrap
+				const lonBase=Math.ceil(lon1/lonStep)*lonStep
+				for (let i=0;;i++) {
+					const loni=lonBase+i*lonStep
+					if (loni>lon2) break  // TODO handle wrap
+					const xi=calculateX(z,loni)
+					const vx=xi-x1+0.5
+					svg+=ex`<line y2="${viewSizeY}" x1="${vx}" x2="${vx}" />`
+					const s=loni.toFixed(Math.max(0,-lonScale))
+					const o=4;
+					svg+=ex`<text y="${viewSizeY-0.5-o}" x="${vx+o}">${s}</text>`
+				}
 			}
 			svg+=`</svg>`
 			$mesh.innerHTML=svg
