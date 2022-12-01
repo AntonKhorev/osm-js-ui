@@ -1,5 +1,5 @@
 import Module from '../module'
-import {Content, makeElement} from '../util'
+import {Content, makeElement, makeLink} from '../util'
 
 export default class MenuModule extends Module {
 	makeHeading():Content {
@@ -10,17 +10,10 @@ export default class MenuModule extends Module {
 			['settings',`Settings`],
 			['test',`Test`],
 		]
-		const $menuEntries=modules.map(([key,name])=>{
-			const $li=makeElement('li')()(name)
-			$li.onclick=()=>{
-				const ev=new CustomEvent<string>('module',{
-					bubbles: true,
-					detail: key
-				})
-				$li.dispatchEvent(ev)
-			}
-			return $li
-		})
-		return [makeElement('ul')()(...$menuEntries)]
+		return [makeElement('ul')()(
+			...modules.map(([key,name])=>makeElement('li')()(
+				makeLink(name,`#module=${key}`)
+			))
+		)]
 	}
 }

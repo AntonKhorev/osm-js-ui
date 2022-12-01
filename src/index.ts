@@ -23,12 +23,9 @@ async function main() {
 	sidebar.setModule(new TestModule)
 	const $mapTopButtons=makeDiv('buttons','top')()
 	const $map=makeDiv('map')($mapTopButtons)
-	new Map($map)
+	const map=new Map($map)
 
 	const $ui=makeDiv('ui','with-sidebar','with-map')($sidebar,$map)
-	$ui.addEventListener('module',ev=>{
-		console.log('got module event',(<CustomEvent<string>>ev).detail)
-	})
 	document.body.append($ui)
 
 	const getOrientation=()=>$ui.classList.contains('portrait')?'portrait':'landscape'
@@ -207,4 +204,24 @@ async function main() {
 		updateTopButtons()
 	})
 	resizeObserver.observe($ui)
+
+	window.onhashchange=()=>{
+		const paramString = (location.hash[0]=='#')
+			? location.hash.slice(1)
+			: location.hash
+		const searchParams=new URLSearchParams(paramString)
+		const moduleHash=searchParams.get('module')
+		if (moduleHash) {
+			console.log(`got module hash`,moduleHash)
+		}
+		const mapHash=searchParams.get('map')
+		if (mapHash) {
+			const [zoomString,latString,lonString]=mapHash.split('/')
+			const zoom=parseInt(zoomString,10)
+			const lat=parseFloat(latString)
+			const lon=parseFloat(lonString)
+			if (!isNaN(zoom) && !isNaN(lat) && !isNaN(lon)) map.go(zoom,lat,lon)
+		}
+	}
+
 }

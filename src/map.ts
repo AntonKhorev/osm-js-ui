@@ -12,172 +12,41 @@ const initialLat=59.93903
 const initialLon=30.31582
 
 export default class Map {
-	constructor($map: HTMLElement) {
+	private position=calculatePosition(initialZoom,initialLat,initialLon)
+	private readonly $tiles=makeDiv('layer','tiles')()
+	private readonly $mesh=makeDiv('layer','mesh')()
+	constructor(private readonly $map: HTMLElement) {
 		const $zoomIn=makeButton(`Zoom in`,'zoom-in')
 		const $zoomOut=makeButton(`Zoom out`,'zoom-out')
 		const $zoomButtons=makeDiv('buttons','controls')($zoomIn,$zoomOut)
 
 		const $surface=makeDiv('surface')()
 		$surface.tabIndex=0
-		const $tiles=makeDiv('layer','tiles')()
-		const $mesh=makeDiv('layer','mesh')()
 		const $crosshair=makeDiv('layer','crosshair')()
 		$crosshair.innerHTML=`<svg><use href="#map-crosshair" /></svg>`
 		const $attribution=makeDiv('attribution')(
 			`© `,makeLink(`OpenStreetMap contributors`,`https://www.openstreetmap.org/copyright`)
 		)
-		$map.append($zoomButtons,$surface,$tiles,$mesh,$crosshair,$attribution)
+		$map.append(
+			$zoomButtons,$surface,
+			this.$tiles,this.$mesh,$crosshair,$attribution
+		)
 
-		let position:[x:number,y:number,z:number]=calculatePosition(initialZoom,initialLat,initialLon)
-
-		const updateHash=()=>{
-			const [zoom,lat,lon]=calculateCoords(...position)
-			const mapHash=`#map=${zoom.toFixed(0)}/${lat.toFixed(5)}/${lon.toFixed(5)}`
-			history.replaceState(null,'',mapHash)
-		}
-
-		const replaceTiles=()=>{
-			$tiles.innerHTML=''
-			const [x,y,z]=position
-			const tileX=Math.floor(x/tileSize)
-			const tileY=Math.floor(y/tileSize)
-			const transX=-x%tileSize
-			const transY=-y%tileSize
-			const viewHalfSizeX=$map.clientWidth/2
-			const viewHalfSizeY=$map.clientHeight/2
-			const tileRange=Math.pow(2,z)
-			const tileMask=tileRange-1
-			const nExtraTilesXL=
-				Math.floor((viewHalfSizeX+transX)/tileSize)+1
-			const nExtraTilesXU=
-				Math.floor((viewHalfSizeX-transX)/tileSize)
-			const nExtraTilesYL=Math.min(
-				tileY,
-				Math.floor((viewHalfSizeY+transY)/tileSize)+1
-			)
-			const nExtraTilesYU=Math.min(
-				tileRange-tileY-1,
-				Math.floor((viewHalfSizeY-transY)/tileSize)
-			)
-			for (let iTileY=-nExtraTilesYL;iTileY<=nExtraTilesYU;iTileY++) {
-				for (let iTileX=-nExtraTilesXL;iTileX<=nExtraTilesXU;iTileX++) {
-					const tileUrl=eu`https://tile.openstreetmap.org/${z}/${(tileX+iTileX)&tileMask}/${tileY+iTileY}.png`
-					const $img=document.createElement('img')
-					$img.src=tileUrl
-					$img.style.translate=`${transX+iTileX*tileSize}px ${transY+iTileY*tileSize}px`
-					$tiles.append($img)
-				}
-			}
-		}
-		const redrawMesh=()=>{
-			const [x,y,z]=position
-			const viewSizeX=$map.clientWidth
-			const viewSizeY=$map.clientHeight
-			const x1=x-Math.floor(viewSizeX/2)
-			const y1=y-Math.floor(viewSizeY/2)
-			const x2=x+Math.floor(viewSizeX/2)
-			const y2=y+Math.floor(viewSizeY/2)
-			const [,lat1,lon1]=calculateCoords(x1,y1,z)
-			const [,lat2,lon2]=calculateCoords(x2,y2,z)
-			const viewMinSize=Math.min(viewSizeX,viewSizeY)
-			const x1c=x-Math.floor(viewMinSize/2)
-			const y1c=y-Math.floor(viewMinSize/2)
-			const x2c=x+Math.floor(viewMinSize/2)
-			const y2c=y+Math.floor(viewMinSize/2)
-			const [,lat1c,lon1c]=calculateCoords(x1c,y1c,z)
-			const [,lat2c,lon2c]=calculateCoords(x2c,y2c,z)
-			const calculateScaleAndStep=(latOrLonSpan:number):[scale:number,step:number]=>{
-				const logSpan=Math.log10(latOrLonSpan/2)
-				const scale=Math.floor(logSpan)
-				const remainder=logSpan-scale
-				let digit=1
-				if (remainder>Math.log10(5)) {
-					digit=5
-				} else if (remainder>Math.log10(2)) {
-					digit=2
-				}
-				const step=digit*10**scale
-				return [scale,step]
-			}
-			let svg=ex`<svg width="${viewSizeX}" height="${viewSizeY}">`
-			const writeMeshLines=(
-				xy:string,
-				scaleCoordRange:number,
-				coord1:number,
-				coord2:number,
-				calculatePixel:(coord:number)=>number,
-				calculateTextPixelAlong:()=>number,
-				calculateTextPixelAcross:(currentPixel:number)=>number
-			):void=>{
-				const [coordScale,coordStep]=calculateScaleAndStep(scaleCoordRange)
-				const coordBase=Math.ceil(coord1/coordStep)*coordStep
-				for (let i=0;;i++) {
-					const currentCoord=coordBase+i*coordStep
-					if (currentCoord>coord2) break
-					const currentPixel=calculatePixel(currentCoord)
-					svg+=ex`<line ${xy[0]}2="100%" ${xy[1]}1="${currentPixel+0.5}" ${xy[1]}2="${currentPixel+0.5}" />`
-					const text=currentCoord.toFixed(Math.max(0,-coordScale))
-					svg+=ex`<text ${xy[0]}="${calculateTextPixelAlong()}" ${xy[1]}="${calculateTextPixelAcross(currentPixel)}">${text}</text>`
-				}
-			}
-			const textOffset=4
-			writeMeshLines(
-				'xy',lat1c-lat2c,lat2,lat1,
-				lat=>calculateY(z,lat)-y1,
-				()=>0.5+textOffset,
-				currentPixel=>currentPixel-textOffset
-			)
-			writeMeshLines(
-				'yx',lon2c-lon1c,lon1,lon2,
-				lon=>calculateX(z,lon)-x1,
-				()=>viewSizeY-0.5-textOffset,
-				currentPixel=>currentPixel+textOffset
-			)
-			svg+=`</svg>`
-			$mesh.innerHTML=svg
-		}
-		const redrawMap=()=>{
-			replaceTiles()
-			redrawMesh()
-		}
-
-		window.onhashchange=ev=>{
-			const paramString = (location.hash[0]=='#')
-				? location.hash.slice(1)
-				: location.hash
-			const searchParams=new URLSearchParams(paramString)
-			const mapHash=searchParams.get('map')
-			if (!mapHash) return
-			const [zoomString,latString,lonString]=mapHash.split('/')
-			const zoom=parseInt(zoomString,10)
-			const lat=parseFloat(latString)
-			const lon=parseFloat(lonString)
-			if (isNaN(zoom) || isNaN(lat) || isNaN(lon)) return
-			const zoom1=Math.min(maxZoom,Math.max(0,zoom))
-			const [x,y,z]=calculatePosition(zoom1,lat,lon)
-			const mask=Math.pow(2,z+tileSizePow)-1
-			const x1=x&mask
-			let y1=Math.min(mask,Math.max(0,y))
-			position=[x1,y1,z]
-			if (zoom!=zoom1 || x!=x1 || y!=y1) updateHash()
-			redrawMap()
-		}
-
-		const resizeObserver=new ResizeObserver(redrawMap)
+		const resizeObserver=new ResizeObserver(()=>this.redrawMap())
 		resizeObserver.observe($map)
 
 		const pan=(dx:number,dy:number)=>{
-			const [x,y,z]=position
+			const [x,y,z]=this.position
 			const mask=Math.pow(2,z+tileSizePow)-1
-			position=[
+			this.position=[
 				(x+dx)&mask,
 				Math.min(mask,Math.max(0,(y+dy))),
 				z
 			]
-			redrawMap()
+			this.redrawMap()
 		}
 		const zoom=(dx:number,dy:number,dz:number)=>{
-			let [x,y,z]=position
+			let [x,y,z]=this.position
 			if (z+dz<0) dz=-z
 			if (z+dz>maxZoom) dz=maxZoom-z
 			if (dz==0) return
@@ -185,8 +54,8 @@ export default class Map {
 			const f=Math.pow(2,dz)
 			x=Math.floor(f*x+(f-1)*dx)
 			y=Math.floor(f*y+(f-1)*dy)
-			position=[x,y,z]
-			redrawMap()
+			this.position=[x,y,z]
+			this.redrawMap()
 		}
 		const mouseZoom=(ev:MouseEvent,dz:number)=>{
 			const viewHalfSizeX=$map.clientWidth/2
@@ -208,7 +77,7 @@ export default class Map {
 			$surface.classList.remove('grabbed')
 			$surface.releasePointerCapture(ev.pointerId)
 			moveLastX=moveLastY=undefined
-			updateHash()
+			this.updateHash()
 		}
 		$surface.onpointermove=ev=>{
 			if (moveLastX==null || moveLastY==null) return
@@ -221,19 +90,19 @@ export default class Map {
 			const dz=-Math.sign(ev.deltaY)
 			if (!dz) return
 			mouseZoom(ev,dz)
-			updateHash()
+			this.updateHash()
 		}
 		$surface.ondblclick=ev=>{
 			mouseZoom(ev,ev.shiftKey?-1:+1)
-			updateHash()
+			this.updateHash()
 		}
 		$zoomIn.onclick=()=>{
 			zoom(0,0,+1)
-			updateHash()
+			this.updateHash()
 		}
 		$zoomOut.onclick=()=>{
 			zoom(0,0,-1)
-			updateHash()
+			this.updateHash()
 		}
 
 		$surface.onkeydown=ev=>{
@@ -255,10 +124,20 @@ export default class Map {
 			} else {
 				return
 			}
-			updateHash()
+			this.updateHash()
 			ev.stopPropagation()
 			ev.preventDefault()
 		}
+	}
+	go(zoom:number,lat:number,lon:number):void {
+		const zoom1=Math.min(maxZoom,Math.max(0,zoom))
+		const [x,y,z]=calculatePosition(zoom1,lat,lon)
+		const mask=Math.pow(2,z+tileSizePow)-1
+		const x1=x&mask
+		let y1=Math.min(mask,Math.max(0,y))
+		this.position=[x1,y1,z]
+		if (zoom!=zoom1 || x!=x1 || y!=y1) this.updateHash()
+		this.redrawMap()
 	}
 	getLayers():[key:string,name:string,value:boolean][] {
 		const layers=[
@@ -271,6 +150,115 @@ export default class Map {
 	}
 	setLayers(layers:[key:string,value:boolean][]):void {
 		// TODO
+	}
+	private updateHash() { // TODO custom event
+		const [zoom,lat,lon]=calculateCoords(...this.position)
+		const mapHash=`#map=${zoom.toFixed(0)}/${lat.toFixed(5)}/${lon.toFixed(5)}`
+		history.replaceState(null,'',mapHash)
+	}
+	private redrawMap() {
+		this.replaceTiles()
+		this.redrawMesh()
+	}
+	private replaceTiles() {
+		this.$tiles.replaceChildren()
+		const [x,y,z]=this.position
+		const tileX=Math.floor(x/tileSize)
+		const tileY=Math.floor(y/tileSize)
+		const transX=-x%tileSize
+		const transY=-y%tileSize
+		const viewHalfSizeX=this.$map.clientWidth/2
+		const viewHalfSizeY=this.$map.clientHeight/2
+		const tileRange=Math.pow(2,z)
+		const tileMask=tileRange-1
+		const nExtraTilesXL=
+			Math.floor((viewHalfSizeX+transX)/tileSize)+1
+		const nExtraTilesXU=
+			Math.floor((viewHalfSizeX-transX)/tileSize)
+		const nExtraTilesYL=Math.min(
+			tileY,
+			Math.floor((viewHalfSizeY+transY)/tileSize)+1
+		)
+		const nExtraTilesYU=Math.min(
+			tileRange-tileY-1,
+			Math.floor((viewHalfSizeY-transY)/tileSize)
+		)
+		for (let iTileY=-nExtraTilesYL;iTileY<=nExtraTilesYU;iTileY++) {
+			for (let iTileX=-nExtraTilesXL;iTileX<=nExtraTilesXU;iTileX++) {
+				const tileUrl=eu`https://tile.openstreetmap.org/${z}/${(tileX+iTileX)&tileMask}/${tileY+iTileY}.png`
+				const $img=document.createElement('img')
+				$img.src=tileUrl
+				$img.style.translate=`${transX+iTileX*tileSize}px ${transY+iTileY*tileSize}px`
+				this.$tiles.append($img)
+			}
+		}
+	}
+	private redrawMesh() {
+		const [x,y,z]=this.position
+		const viewSizeX=this.$map.clientWidth
+		const viewSizeY=this.$map.clientHeight
+		const x1=x-Math.floor(viewSizeX/2)
+		const y1=y-Math.floor(viewSizeY/2)
+		const x2=x+Math.floor(viewSizeX/2)
+		const y2=y+Math.floor(viewSizeY/2)
+		const [,lat1,lon1]=calculateCoords(x1,y1,z)
+		const [,lat2,lon2]=calculateCoords(x2,y2,z)
+		const viewMinSize=Math.min(viewSizeX,viewSizeY)
+		const x1c=x-Math.floor(viewMinSize/2)
+		const y1c=y-Math.floor(viewMinSize/2)
+		const x2c=x+Math.floor(viewMinSize/2)
+		const y2c=y+Math.floor(viewMinSize/2)
+		const [,lat1c,lon1c]=calculateCoords(x1c,y1c,z)
+		const [,lat2c,lon2c]=calculateCoords(x2c,y2c,z)
+		const calculateScaleAndStep=(latOrLonSpan:number):[scale:number,step:number]=>{
+			const logSpan=Math.log10(latOrLonSpan/2)
+			const scale=Math.floor(logSpan)
+			const remainder=logSpan-scale
+			let digit=1
+			if (remainder>Math.log10(5)) {
+				digit=5
+			} else if (remainder>Math.log10(2)) {
+				digit=2
+			}
+			const step=digit*10**scale
+			return [scale,step]
+		}
+		let svg=ex`<svg width="${viewSizeX}" height="${viewSizeY}">`
+		const writeMeshLines=(
+			xy:string,
+			scaleCoordRange:number,
+			coord1:number,
+			coord2:number,
+			calculatePixel:(coord:number)=>number,
+			calculateTextPixelAlong:()=>number,
+			calculateTextPixelAcross:(currentPixel:number)=>number
+		):void=>{
+			const [coordScale,coordStep]=calculateScaleAndStep(scaleCoordRange)
+			const coordBase=Math.ceil(coord1/coordStep)*coordStep
+			for (let i=0;;i++) {
+				const currentCoord=coordBase+i*coordStep
+				if (currentCoord>coord2) break
+				const currentPixel=calculatePixel(currentCoord)
+				svg+=ex`<line ${xy[0]}2="100%" ${xy[1]}1="${currentPixel+0.5}" ${xy[1]}2="${currentPixel+0.5}" />`
+				const text=currentCoord.toFixed(Math.max(0,-coordScale))
+				svg+=ex`<text ${xy[0]}="${calculateTextPixelAlong()}" ${xy[1]}="${calculateTextPixelAcross(currentPixel)}">${text}</text>`
+			}
+		}
+		const textOffset=4
+		writeMeshLines(
+			'xy',lat1c-lat2c,lat2,lat1,
+			lat=>calculateY(z,lat)-y1,
+			()=>0.5+textOffset,
+			currentPixel=>currentPixel-textOffset
+		)
+		writeMeshLines(
+			'yx',lon2c-lon1c,lon1,lon2,
+			lon=>calculateX(z,lon)-x1,
+			()=>viewSizeY-0.5-textOffset,
+			currentPixel=>currentPixel+textOffset
+		)
+		svg+=`</svg>`
+		this.$mesh.innerHTML=svg
 	}
 }
 
