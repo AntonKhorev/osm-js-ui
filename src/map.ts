@@ -244,8 +244,8 @@ export default class Map {
 				if (currentCoord>coord2) break
 				const currentPixel=calculatePixel(currentCoord)
 				svg+=ex`<line ${xy[0]}2="100%" ${xy[1]}1="${currentPixel+0.5}" ${xy[1]}2="${currentPixel+0.5}" />`
-				const text=currentCoord.toFixed(Math.max(0,-coordScale))
-				svg+=ex`<text ${xy[0]}="${calculateTextPixelAlong()}" ${xy[1]}="${calculateTextPixelAcross(currentPixel)}">${text}</text>`
+				const coordString=currentCoord.toFixed(Math.max(0,-coordScale))
+				svg+=ex`<text ${xy[0]}="${calculateTextPixelAlong()}" ${xy[1]}="${calculateTextPixelAcross(currentPixel)}">${coordString}°</text>`
 			}
 		}
 		const textOffset=4
