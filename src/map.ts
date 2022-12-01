@@ -77,6 +77,15 @@ export default class Map {
 			const y1=y-Math.floor(viewSizeY/2)
 			const x2=x+Math.floor(viewSizeX/2)
 			const y2=y+Math.floor(viewSizeY/2)
+			const [,lat1,lon1]=calculateCoords(x1,y1,z)
+			const [,lat2,lon2]=calculateCoords(x2,y2,z)
+			const viewMinSize=Math.min(viewSizeX,viewSizeY)
+			const x1c=x-Math.floor(viewMinSize/2)
+			const y1c=y-Math.floor(viewMinSize/2)
+			const x2c=x+Math.floor(viewMinSize/2)
+			const y2c=y+Math.floor(viewMinSize/2)
+			const [,lat1c,lon1c]=calculateCoords(x1c,y1c,z)
+			const [,lat2c,lon2c]=calculateCoords(x2c,y2c,z)
 			const calculateScaleAndStep=(latOrLonSpan:number):[scale:number,step:number]=>{
 				const logSpan=Math.log10(latOrLonSpan/2)
 				const scale=Math.floor(logSpan)
@@ -90,18 +99,16 @@ export default class Map {
 				const step=digit*10**scale
 				return [scale,step]
 			}
-			const [,lat1,lon1]=calculateCoords(x1,y1,z)
-			const [,lat2,lon2]=calculateCoords(x2,y2,z)
 			let svg=ex`<svg width="${viewSizeX}" height="${viewSizeY}">`
 			// lat
 			{
-				const [latScale,latStep]=calculateScaleAndStep(lat1-lat2)
+				const [latScale,latStep]=calculateScaleAndStep(lat1c-lat2c)
 				const latBase=Math.ceil(lat2/latStep)*latStep
 				for (let i=0;;i++) {
 					const currentLat=latBase+i*latStep
 					if (currentLat>lat1) break
-					const yi=calculateY(z,currentLat)
-					const vy=yi-y1+0.5
+					const currentY=calculateY(z,currentLat)
+					const vy=currentY-y1+0.5
 					svg+=ex`<line x2="${viewSizeX}" y1="${vy}" y2="${vy}" />`
 					const s=currentLat.toFixed(Math.max(0,-latScale))
 					const o=4;
@@ -110,13 +117,13 @@ export default class Map {
 			}
 			// lon
 			{
-				const [lonScale,lonStep]=calculateScaleAndStep(lon2-lon1)
+				const [lonScale,lonStep]=calculateScaleAndStep(lon2c-lon1c)
 				const lonBase=Math.ceil(lon1/lonStep)*lonStep
 				for (let i=0;;i++) {
 					const currentLon=lonBase+i*lonStep
 					if (currentLon>lon2) break
-					const xi=calculateX(z,currentLon)
-					const vx=xi-x1+0.5
+					const currentX=calculateX(z,currentLon)
+					const vx=currentX-x1+0.5
 					svg+=ex`<line y2="${viewSizeY}" x1="${vx}" x2="${vx}" />`
 					const wrappedLon=180-((180-currentLon)%360+360)%360
 					const s=wrappedLon.toFixed(Math.max(0,-lonScale))
