@@ -1,5 +1,5 @@
 import Sidebar from './sidebar'
-import Map from './map'
+import Map, {Coordinates} from './map'
 import {makeDiv, makeButton} from './util'
 import MenuModule from './modules/menu'
 import TestModule from './modules/test'
@@ -206,15 +206,12 @@ async function main() {
 	resizeObserver.observe($ui)
 
 	window.onhashchange=()=>{
-		const paramString = (location.hash[0]=='#')
-			? location.hash.slice(1)
-			: location.hash
-		const searchParams=new URLSearchParams(paramString)
-		const moduleHash=searchParams.get('module')
+		const hashParams=getHashParams()
+		const moduleHash=hashParams.get('module')
 		if (moduleHash) {
 			console.log(`got module hash`,moduleHash)
 		}
-		const mapHash=searchParams.get('map')
+		const mapHash=hashParams.get('map')
 		if (mapHash) {
 			const [zoomString,latString,lonString]=mapHash.split('/')
 			const zoom=parseInt(zoomString,10)
@@ -223,5 +220,31 @@ async function main() {
 			if (!isNaN(zoom) && !isNaN(lat) && !isNaN(lon)) map.go(zoom,lat,lon)
 		}
 	}
+	$map.addEventListener('mapMoveEnd',ev=>{
+		const hashParams=getHashParams()
+		const [zoom,lat,lon]=(<CustomEvent<Coordinates>>ev).detail
+		hashParams.set('map',`${zoom.toFixed(0)}/${lat.toFixed(5)}/${lon.toFixed(5)}`)
+		history.replaceState(null,'',encodeHashParams(hashParams))
+	})
+}
 
+function getHashParams():URLSearchParams {
+	const paramString = (location.hash[0]=='#')
+			? location.hash.slice(1)
+			: location.hash
+	return new URLSearchParams(paramString)
+}
+
+function encodeHashParams(hashParams:URLSearchParams):string {
+	// '#'+hashParams.toString() // this does too much encoding, including '/'
+	const escape=(s:string)=>s.replace(
+		/[^0-9a-zA-Z?/:@._~!$'()*+,;-]/g, // https://stackoverflow.com/a/26119120 except & and =
+		c=>`%${c.charCodeAt(0).toString(16).toUpperCase()}` // escape like in https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURI#encoding_for_rfc3986
+	)
+	let result=''
+	for (const [k,v] of hashParams.entries()) {
+		result+=result?'&':'#'
+		result+=escape(k)+'='+escape(v)
+	}
+	return result
 }

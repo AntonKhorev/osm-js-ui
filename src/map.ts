@@ -1,5 +1,7 @@
 import {makeEscapeTag, escapeXml, makeDiv, makeButton, makeLink} from './util'
 
+export type Coordinates = [zoom:number, lat:number, lon:number]
+
 const eu=makeEscapeTag(encodeURIComponent)
 const ex=makeEscapeTag(escapeXml)
 
@@ -77,7 +79,7 @@ export default class Map {
 			$surface.classList.remove('grabbed')
 			$surface.releasePointerCapture(ev.pointerId)
 			moveLastX=moveLastY=undefined
-			this.updateHash()
+			this.reportMoveEnd()
 		}
 		$surface.onpointermove=ev=>{
 			if (moveLastX==null || moveLastY==null) return
@@ -90,19 +92,19 @@ export default class Map {
 			const dz=-Math.sign(ev.deltaY)
 			if (!dz) return
 			mouseZoom(ev,dz)
-			this.updateHash()
+			this.reportMoveEnd()
 		}
 		$surface.ondblclick=ev=>{
 			mouseZoom(ev,ev.shiftKey?-1:+1)
-			this.updateHash()
+			this.reportMoveEnd()
 		}
 		$zoomIn.onclick=()=>{
 			zoom(0,0,+1)
-			this.updateHash()
+			this.reportMoveEnd()
 		}
 		$zoomOut.onclick=()=>{
 			zoom(0,0,-1)
-			this.updateHash()
+			this.reportMoveEnd()
 		}
 
 		$surface.onkeydown=ev=>{
@@ -124,7 +126,7 @@ export default class Map {
 			} else {
 				return
 			}
-			this.updateHash()
+			this.reportMoveEnd()
 			ev.stopPropagation()
 			ev.preventDefault()
 		}
@@ -136,7 +138,7 @@ export default class Map {
 		const x1=x&mask
 		let y1=Math.min(mask,Math.max(0,y))
 		this.position=[x1,y1,z]
-		if (zoom!=zoom1 || x!=x1 || y!=y1) this.updateHash()
+		if (zoom!=zoom1 || x!=x1 || y!=y1) this.reportMoveEnd()
 		this.redrawMap()
 	}
 	getLayers():[key:string,name:string,value:boolean][] {
@@ -151,10 +153,12 @@ export default class Map {
 	setLayers(layers:[key:string,value:boolean][]):void {
 		// TODO
 	}
-	private updateHash() { // TODO custom event
-		const [zoom,lat,lon]=calculateCoords(...this.position)
-		const mapHash=`#map=${zoom.toFixed(0)}/${lat.toFixed(5)}/${lon.toFixed(5)}`
-		history.replaceState(null,'',mapHash)
+	private reportMoveEnd() {
+		const ev=new CustomEvent<Coordinates>('mapMoveEnd',{
+			bubbles: true,
+			detail: calculateCoords(...this.position)
+		})
+		this.$map.dispatchEvent(ev)
 	}
 	private redrawMap() {
 		this.replaceTiles()
@@ -276,7 +280,7 @@ function calculatePosition(zoom:number,lat:number,lon:number):[x:number,y:number
 	]
 }
 
-function calculateCoords(x:number,y:number,z:number):[zoom:number,lat:number,lon:number] {
+function calculateCoords(x:number,y:number,z:number):Coordinates {
 	const n=Math.PI-2*Math.PI*y/Math.pow(2,z+tileSizePow)
 	return [
 		z,
