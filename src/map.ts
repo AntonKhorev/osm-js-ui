@@ -73,15 +73,29 @@ export default class Map {
 			const [x,y,z]=position
 			const viewSizeX=$map.clientWidth
 			const viewSizeY=$map.clientHeight
-			const x1=x-Math.floor((viewSizeX-1)/2)
-			const y1=y-Math.floor((viewSizeY-1)/2)
+			const x1=x-Math.floor(viewSizeX/2)
+			const y1=y-Math.floor(viewSizeY/2)
 			const x2=x+Math.floor(viewSizeX/2)
 			const y2=y+Math.floor(viewSizeY/2)
 			const [,lat1,lon1]=calculateCoords(x1,y1,z)
 			const [,lat2,lon2]=calculateCoords(x2,y2,z)
-			const latSpan=lat1-lat2
-			const latScale=Math.floor(Math.log10(latSpan))
-			const latStep=10**latScale
+			let latScale=Math.ceil(Math.log10(lat1-lat2))
+			let latDigit=1
+			for (let i=0;i<5;i++) {
+				const latTestStep=latDigit*10**latScale
+				const latTick1=Math.ceil(lat2/latTestStep)
+				const latTick2=Math.floor(lat1/latTestStep)
+				if (latTick2-latTick1>1) break
+				if (latDigit==5) {
+					latDigit=2
+				} else if (latDigit==2) {
+					latDigit=1
+				} else {
+					latDigit=5
+					latScale--
+				}
+			}
+			const latStep=latDigit*10**latScale
 			const latBase=Math.ceil(lat2/latStep)*latStep
 			let svg=ex`<svg width="${viewSizeX}" height="${viewSizeY}">`
 			for (let i=0;;i++) {
