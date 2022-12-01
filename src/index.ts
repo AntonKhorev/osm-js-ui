@@ -80,7 +80,7 @@ async function main() {
 			storePaneVisibility()
 			updateTopButtons()
 		}
-		sidebar.setModule(new MenuModule)
+		location.assign(`#module=menu`)
 	}
 	$splitUi.onclick=()=>{
 		$ui.classList.add('with-sidebar')
@@ -207,13 +207,19 @@ async function main() {
 
 	window.onhashchange=()=>{
 		const hashParams=getHashParams()
-		const moduleHash=hashParams.get('module')
-		if (moduleHash) {
-			console.log(`got module hash`,moduleHash)
+		const moduleHashValue=hashParams.get('module')
+		if (moduleHashValue) {
+			if (moduleHashValue=='menu') {
+				sidebar.setModule(new MenuModule)
+			} else if (moduleHashValue=='settings') {
+				sidebar.setModule(new SettingsModule(map))
+			} else if (moduleHashValue=='test') {
+				sidebar.setModule(new TestModule)
+			}
 		}
-		const mapHash=hashParams.get('map')
-		if (mapHash) {
-			const [zoomString,latString,lonString]=mapHash.split('/')
+		const mapHashValue=hashParams.get('map')
+		if (mapHashValue) {
+			const [zoomString,latString,lonString]=mapHashValue.split('/')
 			const zoom=parseInt(zoomString,10)
 			const lat=parseFloat(latString)
 			const lon=parseFloat(lonString)
