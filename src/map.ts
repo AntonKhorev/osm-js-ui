@@ -100,37 +100,39 @@ export default class Map {
 				return [scale,step]
 			}
 			let svg=ex`<svg width="${viewSizeX}" height="${viewSizeY}">`
-			// lat
-			{
-				const [latScale,latStep]=calculateScaleAndStep(lat1c-lat2c)
-				const latBase=Math.ceil(lat2/latStep)*latStep
+			const writeMeshLines=(
+				xy:string,
+				scaleCoordRange:number,
+				coord1:number,
+				coord2:number,
+				calculatePixel:(coord:number)=>number,
+				calculateTextPixelAlong:()=>number,
+				calculateTextPixelAcross:(currentPixel:number)=>number
+			):void=>{
+				const [coordScale,coordStep]=calculateScaleAndStep(scaleCoordRange)
+				const coordBase=Math.ceil(coord1/coordStep)*coordStep
 				for (let i=0;;i++) {
-					const currentLat=latBase+i*latStep
-					if (currentLat>lat1) break
-					const currentY=calculateY(z,currentLat)
-					const vy=currentY-y1+0.5
-					svg+=ex`<line x2="${viewSizeX}" y1="${vy}" y2="${vy}" />`
-					const s=currentLat.toFixed(Math.max(0,-latScale))
-					const o=4;
-					svg+=ex`<text x="${0.5+o}" y="${vy-o}">${s}</text>`
+					const currentCoord=coordBase+i*coordStep
+					if (currentCoord>coord2) break
+					const currentPixel=calculatePixel(currentCoord)
+					svg+=ex`<line ${xy[0]}2="100%" ${xy[1]}1="${currentPixel+0.5}" ${xy[1]}2="${currentPixel+0.5}" />`
+					const text=currentCoord.toFixed(Math.max(0,-coordScale))
+					svg+=ex`<text ${xy[0]}="${calculateTextPixelAlong()}" ${xy[1]}="${calculateTextPixelAcross(currentPixel)}">${text}</text>`
 				}
 			}
-			// lon
-			{
-				const [lonScale,lonStep]=calculateScaleAndStep(lon2c-lon1c)
-				const lonBase=Math.ceil(lon1/lonStep)*lonStep
-				for (let i=0;;i++) {
-					const currentLon=lonBase+i*lonStep
-					if (currentLon>lon2) break
-					const currentX=calculateX(z,currentLon)
-					const vx=currentX-x1+0.5
-					svg+=ex`<line y2="${viewSizeY}" x1="${vx}" x2="${vx}" />`
-					const wrappedLon=180-((180-currentLon)%360+360)%360
-					const s=wrappedLon.toFixed(Math.max(0,-lonScale))
-					const o=4;
-					svg+=ex`<text y="${viewSizeY-0.5-o}" x="${vx+o}">${s}</text>`
-				}
-			}
+			const textOffset=4
+			writeMeshLines(
+				'xy',lat1c-lat2c,lat2,lat1,
+				lat=>calculateY(z,lat)-y1,
+				()=>0.5+textOffset,
+				currentPixel=>currentPixel-textOffset
+			)
+			writeMeshLines(
+				'yx',lon2c-lon1c,lon1,lon2,
+				lon=>calculateX(z,lon)-x1,
+				()=>viewSizeY-0.5-textOffset,
+				currentPixel=>currentPixel+textOffset
+			)
 			svg+=`</svg>`
 			$mesh.innerHTML=svg
 		}
