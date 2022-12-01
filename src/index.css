@@ -208,6 +208,7 @@ body > .symbols {
 .ui .map .layer {
 	position: absolute;
 	pointer-events: none;
+	user-select: none;
 }
 .ui .map .layer.tiles {
 	width: 0;
