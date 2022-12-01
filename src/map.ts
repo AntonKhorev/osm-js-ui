@@ -98,27 +98,28 @@ export default class Map {
 				const [latScale,latStep]=calculateScaleAndStep(lat1-lat2)
 				const latBase=Math.ceil(lat2/latStep)*latStep
 				for (let i=0;;i++) {
-					const lati=latBase+i*latStep
-					if (lati>lat1) break
-					const yi=calculateY(z,lati)
+					const currentLat=latBase+i*latStep
+					if (currentLat>lat1) break
+					const yi=calculateY(z,currentLat)
 					const vy=yi-y1+0.5
 					svg+=ex`<line x2="${viewSizeX}" y1="${vy}" y2="${vy}" />`
-					const s=lati.toFixed(Math.max(0,-latScale))
+					const s=currentLat.toFixed(Math.max(0,-latScale))
 					const o=4;
 					svg+=ex`<text x="${0.5+o}" y="${vy-o}">${s}</text>`
 				}
 			}
 			// lon
 			{
-				const [lonScale,lonStep]=calculateScaleAndStep(lon2-lon1) // TODO handle wrap
+				const [lonScale,lonStep]=calculateScaleAndStep(lon2-lon1)
 				const lonBase=Math.ceil(lon1/lonStep)*lonStep
 				for (let i=0;;i++) {
-					const loni=lonBase+i*lonStep
-					if (loni>lon2) break  // TODO handle wrap
-					const xi=calculateX(z,loni)
+					const currentLon=lonBase+i*lonStep
+					if (currentLon>lon2) break
+					const xi=calculateX(z,currentLon)
 					const vx=xi-x1+0.5
 					svg+=ex`<line y2="${viewSizeY}" x1="${vx}" x2="${vx}" />`
-					const s=loni.toFixed(Math.max(0,-lonScale))
+					const wrappedLon=180-((180-currentLon)%360+360)%360
+					const s=wrappedLon.toFixed(Math.max(0,-lonScale))
 					const o=4;
 					svg+=ex`<text y="${viewSizeY-0.5-o}" x="${vx+o}">${s}</text>`
 				}
