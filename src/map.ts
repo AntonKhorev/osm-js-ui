@@ -1,6 +1,7 @@
-import {makeEscapeTag, makeDiv, makeButton, makeLink} from './util'
+import {makeEscapeTag, escapeXml, makeDiv, makeButton, makeLink} from './util'
 
-const e=makeEscapeTag(encodeURIComponent)
+const eu=makeEscapeTag(encodeURIComponent)
+const ex=makeEscapeTag(escapeXml)
 
 const tileSize=256
 const tileSizePow=8
@@ -18,13 +19,14 @@ export default class Map {
 
 		const $surface=makeDiv('surface')()
 		$surface.tabIndex=0
-		const $tiles=makeDiv('tiles')()
-		const $crosshair=makeDiv('crosshair')()
+		const $tiles=makeDiv('layer','tiles')()
+		const $mesh=makeDiv('layer','mesh')()
+		const $crosshair=makeDiv('layer','crosshair')()
 		$crosshair.innerHTML=`<svg><use href="#map-crosshair" /></svg>`
 		const $attribution=makeDiv('attribution')(
 			`© `,makeLink(`OpenStreetMap contributors`,`https://www.openstreetmap.org/copyright`)
 		)
-		$map.append($zoomButtons,$surface,$tiles,$crosshair,$attribution)
+		$map.append($zoomButtons,$surface,$tiles,$mesh,$crosshair,$attribution)
 
 		let position:[x:number,y:number,z:number]=calculatePosition(initialZoom,initialLat,initialLon)
 
@@ -59,13 +61,45 @@ export default class Map {
 			)
 			for (let iTileY=-nExtraTilesYL;iTileY<=nExtraTilesYU;iTileY++) {
 				for (let iTileX=-nExtraTilesXL;iTileX<=nExtraTilesXU;iTileX++) {
-					const tileUrl=e`https://tile.openstreetmap.org/${z}/${(tileX+iTileX)&tileMask}/${tileY+iTileY}.png`
+					const tileUrl=eu`https://tile.openstreetmap.org/${z}/${(tileX+iTileX)&tileMask}/${tileY+iTileY}.png`
 					const $img=document.createElement('img')
 					$img.src=tileUrl
 					$img.style.translate=`${transX+iTileX*tileSize}px ${transY+iTileY*tileSize}px`
 					$tiles.append($img)
 				}
 			}
+		}
+		const redrawMesh=()=>{
+			const [x,y,z]=position
+			const viewSizeX=$map.clientWidth
+			const viewSizeY=$map.clientHeight
+			const x1=x-Math.floor((viewSizeX-1)/2)
+			const y1=y-Math.floor((viewSizeY-1)/2)
+			const x2=x+Math.floor(viewSizeX/2)
+			const y2=y+Math.floor(viewSizeY/2)
+			const [,lat1,lon1]=calculateCoords(x1,y1,z)
+			const [,lat2,lon2]=calculateCoords(x2,y2,z)
+			const latSpan=lat1-lat2
+			const latScale=Math.floor(Math.log10(latSpan))
+			const latStep=10**latScale
+			const latBase=Math.ceil(lat2/latStep)*latStep
+			let svg=ex`<svg width="${viewSizeX}" height="${viewSizeY}">`
+			for (let i=0;;i++) {
+				const lati=latBase+i*latStep
+				if (lati>lat1) break
+				const yi=calculateY(z,lati)
+				const vy=yi-y1+0.5
+				svg+=ex`<line x2="${viewSizeX}" y1="${vy}" y2="${vy}" />`
+				const s=lati.toFixed(Math.max(0,-latScale))
+				const o=4;
+				svg+=ex`<text x="${0.5+o}" y="${vy-o}">${s}</text>`
+			}
+			svg+=`</svg>`
+			$mesh.innerHTML=svg
+		}
+		const redrawMap=()=>{
+			replaceTiles()
+			redrawMesh()
 		}
 
 		window.onhashchange=ev=>{
@@ -87,10 +121,10 @@ export default class Map {
 			let y1=Math.min(mask,Math.max(0,y))
 			position=[x1,y1,z]
 			if (zoom!=zoom1 || x!=x1 || y!=y1) updateHash()
-			replaceTiles()
+			redrawMap()
 		}
 
-		const resizeObserver=new ResizeObserver(replaceTiles)
+		const resizeObserver=new ResizeObserver(redrawMap)
 		resizeObserver.observe($map)
 
 		const pan=(dx:number,dy:number)=>{
@@ -101,7 +135,7 @@ export default class Map {
 				Math.min(mask,Math.max(0,(y+dy))),
 				z
 			]
-			replaceTiles()
+			redrawMap()
 		}
 		const zoom=(dx:number,dy:number,dz:number)=>{
 			let [x,y,z]=position
@@ -113,7 +147,7 @@ export default class Map {
 			x=Math.floor(f*x+(f-1)*dx)
 			y=Math.floor(f*y+(f-1)*dy)
 			position=[x,y,z]
-			replaceTiles()
+			redrawMap()
 		}
 		const mouseZoom=(ev:MouseEvent,dz:number)=>{
 			const viewHalfSizeX=$map.clientWidth/2
@@ -189,10 +223,16 @@ export default class Map {
 	}
 }
 
+function calculateX(zoom:number,lon:number):number {
+	return Math.floor(Math.pow(2,zoom+tileSizePow)*(lon+180)/360)
+}
+function calculateY(zoom:number,lat:number):number {
+	return Math.floor(Math.pow(2,zoom+tileSizePow)*(1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2)
+}
 function calculatePosition(zoom:number,lat:number,lon:number):[x:number,y:number,z:number] {
 	return [
-		Math.floor(Math.pow(2,zoom+tileSizePow)*(lon+180)/360),
-		Math.floor(Math.pow(2,zoom+tileSizePow)*(1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2),
+		calculateX(zoom,lon),
+		calculateY(zoom,lat),
 		zoom
 	]
 }

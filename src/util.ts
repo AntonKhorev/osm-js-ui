@@ -8,6 +8,16 @@ export function makeEscapeTag(escapeFn: (text: string) => string): (strings: Tem
 	}
 }
 
+export function escapeXml(text: string) { // https://github.com/Inist-CNRS/node-xml-writer
+	return text
+		.replace(/&/g,'&amp;')
+		.replace(/</g,'&lt;')
+		.replace(/"/g,'&quot;')
+		.replace(/\t/g,'&#x9;')
+		.replace(/\n/g,'&#xA;')
+		.replace(/\r/g,'&#xD;')
+}
+
 export function makeElement<K extends keyof HTMLElementTagNameMap>(tag: K): ((...classes: string[])=>(...items: Array<string|HTMLElement>)=>HTMLElementTagNameMap[K]) {
 	return (...classes)=>(...items)=>{
 		const $element=document.createElement(tag)
