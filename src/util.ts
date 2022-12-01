@@ -1,3 +1,5 @@
+export type Content = Array<string|Node>
+
 export function makeEscapeTag(escapeFn: (text: string) => string): (strings: TemplateStringsArray, ...values: unknown[]) => string {
 	return function(strings: TemplateStringsArray, ...values: unknown[]): string {
 		let result=strings[0]
@@ -18,7 +20,7 @@ export function escapeXml(text: string) { // https://github.com/Inist-CNRS/node-
 		.replace(/\r/g,'&#xD;')
 }
 
-export function makeElement<K extends keyof HTMLElementTagNameMap>(tag: K): ((...classes: string[])=>(...items: Array<string|HTMLElement>)=>HTMLElementTagNameMap[K]) {
+export function makeElement<K extends keyof HTMLElementTagNameMap>(tag: K): ((...classes: string[])=>(...items: Content)=>HTMLElementTagNameMap[K]) {
 	return (...classes)=>(...items)=>{
 		const $element=document.createElement(tag)
 		if (classes.length>0) $element.classList.add(...classes)

@@ -1,6 +1,9 @@
 import Sidebar from './sidebar'
 import Map from './map'
 import {makeDiv, makeButton} from './util'
+import MenuModule from './modules/menu'
+import TestModule from './modules/test'
+import SettingsModule from './modules/settings'
 
 const storagePrefix='osm-ui'
 
@@ -16,11 +19,16 @@ async function main() {
 
 	const $sidebarTopButtons=makeDiv('buttons','top')()
 	const $sidebar=makeDiv('sidebar')($sidebarTopButtons)
-	new Sidebar($sidebar)
+	const sidebar=new Sidebar($sidebar)
+	sidebar.setModule(new TestModule)
 	const $mapTopButtons=makeDiv('buttons','top')()
 	const $map=makeDiv('map')($mapTopButtons)
 	new Map($map)
+
 	const $ui=makeDiv('ui','with-sidebar','with-map')($sidebar,$map)
+	$ui.addEventListener('module',ev=>{
+		console.log('got module event',(<CustomEvent<string>>ev).detail)
+	})
 	document.body.append($ui)
 
 	const getOrientation=()=>$ui.classList.contains('portrait')?'portrait':'landscape'
@@ -75,7 +83,7 @@ async function main() {
 			storePaneVisibility()
 			updateTopButtons()
 		}
-		// TODO open menu
+		sidebar.setModule(new MenuModule)
 	}
 	$splitUi.onclick=()=>{
 		$ui.classList.add('with-sidebar')

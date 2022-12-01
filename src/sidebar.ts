@@ -1,16 +1,15 @@
 import {makeElement, makeDiv} from './util'
+import Module from './module'
 
 export default class Sidebar {
+	private $heading=makeElement('h1')()()
+	private $content=makeDiv('content')()
 	constructor($sidebar: HTMLElement) {
 		const $shrunkHeading=makeDiv('shrunk-heading')()
 		const $outerLeadPlaceholder=makeDiv('lead','outer')($shrunkHeading)
 		const $innerLeadPlaceholder=makeDiv('lead','inner')()
-		const $content=makeDiv('content')($innerLeadPlaceholder)
-		$sidebar.append($outerLeadPlaceholder,$content)
-
-		const $heading=makeElement('h1')()(
-			`Temporary sidebar title that has to be looooong enough. I want it to take at least three lines when shrunk.`
-		)
+		const $scrollArea=makeDiv('scroll-area')($innerLeadPlaceholder,this.$content)
+		$sidebar.append($outerLeadPlaceholder,$scrollArea)
 
 		const outerLeadWidthBoundary=240
 		const outerLeadMinHeight=48 // --lead-offset
@@ -21,14 +20,14 @@ export default class Sidebar {
 		const showShrunkHeading=()=>{
 			if ($shrunkHeading.hasChildNodes()) return
 			$shrunkHeading.replaceChildren()
-			for (const $node of $heading.childNodes) {
+			for (const $node of this.$heading.childNodes) {
 				$shrunkHeading.append($node.cloneNode(true))
 			}
 		}
 		const updateLeadPlaceholdersOffset=()=>{
 			const outerLeadHeight=$outerLeadPlaceholder.clientHeight
 			const removeScrollOffset=()=>$outerLeadPlaceholder.style.removeProperty('translate')
-			const scrollHeight=$content.scrollTop
+			const scrollHeight=$scrollArea.scrollTop
 			if (isInnerHeading==false) {
 				const leadHeightDiff=outerLeadHeight-outerLeadMinHeight
 				const scrollTopOffset=Math.min(leadHeightDiff,scrollHeight)
@@ -45,7 +44,7 @@ export default class Sidebar {
 				}
 			} else if (isInnerHeading==true) {
 				removeScrollOffset()
-				if (scrollHeight<$heading.clientHeight) {
+				if (scrollHeight<this.$heading.clientHeight) {
 					hideShrunkHeading()
 				} else {
 					showShrunkHeading()
@@ -59,12 +58,12 @@ export default class Sidebar {
 				if (isInnerHeading!=true) {
 					isInnerHeading=true
 					removeInnerLeadHeight()
-					$innerLeadPlaceholder.append($heading)
+					$innerLeadPlaceholder.append(this.$heading)
 				}
 			} else {
 				if (isInnerHeading!=false) {
 					isInnerHeading=false
-					$outerLeadPlaceholder.append($heading)
+					$outerLeadPlaceholder.append(this.$heading)
 				}
 				const outerLeadHeight=$outerLeadPlaceholder.clientHeight
 				const leadHeightDiff=outerLeadHeight-outerLeadMinHeight
@@ -78,12 +77,14 @@ export default class Sidebar {
 		}
 		const outerLeadResizeObserver=new ResizeObserver(updateLeadPlaceholdersContents)
 		outerLeadResizeObserver.observe($outerLeadPlaceholder)
-		$content.onscroll=updateLeadPlaceholdersOffset
-
-		for (let i=0;i<30;i++) {
-			$content.append(makeElement('p')()(
-				`Lorem ipsum ${i}!`
-			))
-		}
+		$scrollArea.onscroll=updateLeadPlaceholdersOffset
+	}
+	setModule(module: Module) {
+		this.$heading.replaceChildren(
+			...module.makeHeading()
+		)
+		this.$content.replaceChildren(
+			...module.makeContent()
+		)
 	}
 }

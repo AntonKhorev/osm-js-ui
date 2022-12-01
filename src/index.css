@@ -132,7 +132,7 @@ body > .symbols {
 	display: -webkit-box; /* display: flex; */
 	-webkit-box-orient: vertical; /* flex-direction: column; */
 }
-.ui .sidebar .content {
+.ui .sidebar .scroll-area {
 	position: absolute;
 	inset: var(--lead-offset) 0 0;
 	overflow-y: scroll;

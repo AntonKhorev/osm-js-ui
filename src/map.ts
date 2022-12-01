@@ -260,6 +260,18 @@ export default class Map {
 			ev.preventDefault()
 		}
 	}
+	getLayers():[key:string,name:string,value:boolean][] {
+		const layers=[
+			['crosshair',`Crosshair`],
+			['mesh',`Coordinate grid`],
+			['zoom',`Zoom buttons`],
+			['attribution',`Attribution`],
+		]
+		return layers.map(([key,name])=>[key,name,true])
+	}
+	setLayers(layers:[key:string,value:boolean][]):void {
+		// TODO
+	}
 }
 
 function calculateX(zoom:number,lon:number):number {
