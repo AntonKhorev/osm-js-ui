@@ -39,6 +39,43 @@ abstract class MapLayer {
 	redraw(position:Position,viewSizeX:number,viewSizeY:number):void {}
 }
 
+class TileMapLayer extends MapLayer {
+	constructor() {
+		super('tiles')
+	}
+	redraw([x,y,z]:Position,viewSizeX:number,viewSizeY:number) {
+		this.$layer.replaceChildren()
+		if (!this.visible) return
+		const tileX=Math.floor(x/tileSize)
+		const tileY=Math.floor(y/tileSize)
+		const transX=-x%tileSize
+		const transY=-y%tileSize
+		const tileRange=Math.pow(2,z)
+		const tileMask=tileRange-1
+		const nExtraTilesXL=
+			Math.floor((viewSizeX/2+transX)/tileSize)+1
+		const nExtraTilesXU=
+			Math.floor((viewSizeX/2-transX)/tileSize)
+		const nExtraTilesYL=Math.min(
+			tileY,
+			Math.floor((viewSizeY/2+transY)/tileSize)+1
+		)
+		const nExtraTilesYU=Math.min(
+			tileRange-tileY-1,
+			Math.floor((viewSizeY/2-transY)/tileSize)
+		)
+		for (let iTileY=-nExtraTilesYL;iTileY<=nExtraTilesYU;iTileY++) {
+			for (let iTileX=-nExtraTilesXL;iTileX<=nExtraTilesXU;iTileX++) {
+				const tileUrl=eu`https://tile.openstreetmap.org/${z}/${(tileX+iTileX)&tileMask}/${tileY+iTileY}.png`
+				const $img=document.createElement('img')
+				$img.src=tileUrl
+				$img.style.translate=`${transX+iTileX*tileSize}px ${transY+iTileY*tileSize}px`
+				this.$layer.append($img)
+			}
+		}
+	}
+}
+
 class CrosshairMapLayer extends MapLayer {
 	constructor() {
 		super('crosshair')
@@ -119,8 +156,8 @@ class GridMapLayer extends MapLayer {
 
 export default class MapPane {
 	private position=calculatePosition(initialZoom,initialLat,initialLon)
-	private readonly $tiles=makeDiv('layer','tiles')()
 	private readonly layers:Map<string,MapLayer>=new Map([
+		['tiles',new TileMapLayer],
 		['crosshair',new CrosshairMapLayer],
 		['grid',new GridMapLayer],
 	])
@@ -135,7 +172,7 @@ export default class MapPane {
 			`© `,makeLink(`OpenStreetMap contributors`,`https://www.openstreetmap.org/copyright`)
 		)
 		$map.append(
-			$zoomButtons,$surface,this.$tiles,
+			$zoomButtons,$surface,
 			...Array.from(this.layers.values(),layer=>layer.$layer),
 			$attribution
 		)
@@ -267,40 +304,8 @@ export default class MapPane {
 		this.$map.dispatchEvent(ev)
 	}
 	private redrawMap() {
-		this.replaceTiles()
-		this.layers.get('grid')?.redraw(this.position,this.$map.clientWidth,this.$map.clientHeight)
-	}
-	private replaceTiles() {
-		this.$tiles.replaceChildren()
-		const [x,y,z]=this.position
-		const tileX=Math.floor(x/tileSize)
-		const tileY=Math.floor(y/tileSize)
-		const transX=-x%tileSize
-		const transY=-y%tileSize
-		const viewHalfSizeX=this.$map.clientWidth/2
-		const viewHalfSizeY=this.$map.clientHeight/2
-		const tileRange=Math.pow(2,z)
-		const tileMask=tileRange-1
-		const nExtraTilesXL=
-			Math.floor((viewHalfSizeX+transX)/tileSize)+1
-		const nExtraTilesXU=
-			Math.floor((viewHalfSizeX-transX)/tileSize)
-		const nExtraTilesYL=Math.min(
-			tileY,
-			Math.floor((viewHalfSizeY+transY)/tileSize)+1
-		)
-		const nExtraTilesYU=Math.min(
-			tileRange-tileY-1,
-			Math.floor((viewHalfSizeY-transY)/tileSize)
-		)
-		for (let iTileY=-nExtraTilesYL;iTileY<=nExtraTilesYU;iTileY++) {
-			for (let iTileX=-nExtraTilesXL;iTileX<=nExtraTilesXU;iTileX++) {
-				const tileUrl=eu`https://tile.openstreetmap.org/${z}/${(tileX+iTileX)&tileMask}/${tileY+iTileY}.png`
-				const $img=document.createElement('img')
-				$img.src=tileUrl
-				$img.style.translate=`${transX+iTileX*tileSize}px ${transY+iTileY*tileSize}px`
-				this.$tiles.append($img)
-			}
+		for (const layer of this.layers.values()) {
+			layer.redraw(this.position,this.$map.clientWidth,this.$map.clientHeight)
 		}
 	}
 }
