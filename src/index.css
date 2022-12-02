@@ -221,14 +221,14 @@ body > .symbols {
 	width: 256px;
 	height: 256px;
 }
-.ui .map .layer.mesh {
+.ui .map .layer.grid {
 	inset: 0;
 }
-.ui .map .layer.mesh svg * {
+.ui .map .layer.grid svg * {
 	stroke: currentColor;
 	opacity: 0.5;
 }
-.ui .map .layer.mesh svg text {
+.ui .map .layer.grid svg text {
 	font: 10px sans-serif;
 }
 .ui .map .layer.crosshair {

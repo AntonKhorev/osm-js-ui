@@ -1,6 +1,7 @@
 import {makeEscapeTag, escapeXml, makeDiv, makeButton, makeLink} from './util'
 
 export type Coordinates = [zoom:number, lat:number, lon:number]
+export type Position = [x:number,y:number,z:number]
 
 const eu=makeEscapeTag(encodeURIComponent)
 const ex=makeEscapeTag(escapeXml)
@@ -15,38 +16,114 @@ const initialLon=30.31582
 
 const layerNames=[
 	['crosshair',`Crosshair`],
-	['mesh',`Coordinate grid`],
+	['grid',`Coordinate grid`],
 	['zoom',`Zoom buttons`], // TODO this is not a layer
 	['attribution',`Attribution`],
 ]
 
 abstract class MapLayer {
-	abstract get $layer():HTMLElement
-	toggle(isVisible:boolean) {
-		if (isVisible) {
-			this.$layer.style.removeProperty('display')
-		} else {
-			this.$layer.style.display='none'
-		}
+	public readonly $layer:HTMLElement
+	constructor(key:string) {
+		this.$layer=makeDiv('layer',key)()
 	}
+	get visible():boolean {
+		return this.$layer.style.display!='none'
+	}
+	hide():void {
+		this.$layer.style.display='none'
+	}
+	show(position:Position,viewSizeX:number,viewSizeY:number):void {
+		this.$layer.style.removeProperty('display')
+		this.redraw(position,viewSizeX,viewSizeY)
+	}
+	redraw(position:Position,viewSizeX:number,viewSizeY:number):void {}
 }
 
 class CrosshairMapLayer extends MapLayer {
-	public $layer=makeDiv('layer','crosshair')()
 	constructor() {
-		super()
+		super('crosshair')
 		this.$layer.innerHTML=`<svg><use href="#map-crosshair" /></svg>`
+	}
+}
+
+class GridMapLayer extends MapLayer {
+	constructor() {
+		super('grid')
+	}
+	redraw([x,y,z]:Position,viewSizeX:number,viewSizeY:number) {
+		if (!this.visible) return this.$layer.replaceChildren()
+		const x1=x-Math.floor(viewSizeX/2)
+		const y1=y-Math.floor(viewSizeY/2)
+		const x2=x+Math.floor(viewSizeX/2)
+		const y2=y+Math.floor(viewSizeY/2)
+		const [,lat1,lon1]=calculateCoords(x1,y1,z)
+		const [,lat2,lon2]=calculateCoords(x2,y2,z)
+		const viewMinSize=Math.min(viewSizeX,viewSizeY)
+		const x1c=x-Math.floor(viewMinSize/2)
+		const y1c=y-Math.floor(viewMinSize/2)
+		const x2c=x+Math.floor(viewMinSize/2)
+		const y2c=y+Math.floor(viewMinSize/2)
+		const [,lat1c,lon1c]=calculateCoords(x1c,y1c,z)
+		const [,lat2c,lon2c]=calculateCoords(x2c,y2c,z)
+		const calculateScaleAndStep=(latOrLonSpan:number):[scale:number,step:number]=>{
+			const logSpan=Math.log10(latOrLonSpan/2)
+			const scale=Math.floor(logSpan)
+			const remainder=logSpan-scale
+			let digit=1
+			if (remainder>Math.log10(5)) {
+				digit=5
+			} else if (remainder>Math.log10(2)) {
+				digit=2
+			}
+			const step=digit*10**scale
+			return [scale,step]
+		}
+		let svg=ex`<svg width="${viewSizeX}" height="${viewSizeY}">`
+		const writeMeshLines=(
+			xy:string,
+			scaleCoordRange:number,
+			coord1:number,
+			coord2:number,
+			calculatePixel:(coord:number)=>number,
+			calculateTextPixelAlong:()=>number,
+			calculateTextPixelAcross:(currentPixel:number)=>number
+		):void=>{
+			const [coordScale,coordStep]=calculateScaleAndStep(scaleCoordRange)
+			const coordBase=Math.ceil(coord1/coordStep)*coordStep
+			for (let i=0;;i++) {
+				const currentCoord=coordBase+i*coordStep
+				if (currentCoord>coord2) break
+				const currentPixel=calculatePixel(currentCoord)
+				svg+=ex`<line ${xy[0]}2="100%" ${xy[1]}1="${currentPixel+0.5}" ${xy[1]}2="${currentPixel+0.5}" />`
+				const coordString=currentCoord.toFixed(Math.max(0,-coordScale))
+				svg+=ex`<text ${xy[0]}="${calculateTextPixelAlong()}" ${xy[1]}="${calculateTextPixelAcross(currentPixel)}">${coordString}°</text>`
+			}
+		}
+		const textOffset=4
+		writeMeshLines(
+			'xy',lat1c-lat2c,lat2,lat1,
+			lat=>calculateY(z,lat)-y1,
+			()=>0.5+textOffset,
+			currentPixel=>currentPixel-textOffset
+		)
+		writeMeshLines(
+			'yx',lon2c-lon1c,lon1,lon2,
+			lon=>calculateX(z,lon)-x1,
+			()=>viewSizeY-0.5-textOffset,
+			currentPixel=>currentPixel+textOffset
+		)
+		svg+=`</svg>`
+		this.$layer.innerHTML=svg
 	}
 }
 
 export default class MapPane {
 	private position=calculatePosition(initialZoom,initialLat,initialLon)
 	private readonly $tiles=makeDiv('layer','tiles')()
-	private readonly $mesh=makeDiv('layer','mesh')()
-	private enabledLayers:Map<string,boolean>=new Map(
-		layerNames.map(([key])=>[key,true])
-	)
-	private crosshair=new CrosshairMapLayer
+	private readonly layers:Map<string,MapLayer>=new Map([
+		['crosshair',new CrosshairMapLayer],
+		['grid',new GridMapLayer],
+	])
 	constructor(private readonly $map: HTMLElement) {
 		const $zoomIn=makeButton(`Zoom in`,'zoom-in')
 		const $zoomOut=makeButton(`Zoom out`,'zoom-out')
@@ -58,8 +135,9 @@ export default class MapPane {
 			`© `,makeLink(`OpenStreetMap contributors`,`https://www.openstreetmap.org/copyright`)
 		)
 		$map.append(
-			$zoomButtons,$surface,
-			this.$tiles,this.$mesh,this.crosshair.$layer,$attribution
+			$zoomButtons,$surface,this.$tiles,
+			...Array.from(this.layers.values(),layer=>layer.$layer),
+			$attribution
 		)
 
 		const resizeObserver=new ResizeObserver(()=>this.redrawMap())
@@ -159,7 +237,7 @@ export default class MapPane {
 			ev.preventDefault()
 		}
 	}
-	go(zoom:number,lat:number,lon:number):void {
+	move(zoom:number,lat:number,lon:number):void {
 		const zoom1=Math.min(maxZoom,Math.max(0,zoom))
 		const [x,y,z]=calculatePosition(zoom1,lat,lon)
 		const mask=Math.pow(2,z+tileSizePow)-1
@@ -173,9 +251,12 @@ export default class MapPane {
 		return layerNames.map(([key,name])=>[key,name,true])
 	}
 	toggleLayer(key:string,value:boolean):void {
-		this.enabledLayers.set(key,value)
-		if (key=='crosshair') {
-			this.crosshair.toggle(value)
+		const layer=this.layers.get(key)
+		if (!layer) return
+		if (value) {
+			layer.show(this.position,this.$map.clientWidth,this.$map.clientHeight)
+		} else {
+			layer.hide()
 		}
 	}
 	private reportMoveEnd() {
@@ -187,7 +268,7 @@ export default class MapPane {
 	}
 	private redrawMap() {
 		this.replaceTiles()
-		this.redrawMesh()
+		this.layers.get('grid')?.redraw(this.position,this.$map.clientWidth,this.$map.clientHeight)
 	}
 	private replaceTiles() {
 		this.$tiles.replaceChildren()
@@ -222,73 +303,6 @@ export default class MapPane {
 			}
 		}
 	}
-	private redrawMesh() {
-		const [x,y,z]=this.position
-		const viewSizeX=this.$map.clientWidth
-		const viewSizeY=this.$map.clientHeight
-		const x1=x-Math.floor(viewSizeX/2)
-		const y1=y-Math.floor(viewSizeY/2)
-		const x2=x+Math.floor(viewSizeX/2)
-		const y2=y+Math.floor(viewSizeY/2)
-		const [,lat1,lon1]=calculateCoords(x1,y1,z)
-		const [,lat2,lon2]=calculateCoords(x2,y2,z)
-		const viewMinSize=Math.min(viewSizeX,viewSizeY)
-		const x1c=x-Math.floor(viewMinSize/2)
-		const y1c=y-Math.floor(viewMinSize/2)
-		const x2c=x+Math.floor(viewMinSize/2)
-		const y2c=y+Math.floor(viewMinSize/2)
-		const [,lat1c,lon1c]=calculateCoords(x1c,y1c,z)
-		const [,lat2c,lon2c]=calculateCoords(x2c,y2c,z)
-		const calculateScaleAndStep=(latOrLonSpan:number):[scale:number,step:number]=>{
-			const logSpan=Math.log10(latOrLonSpan/2)
-			const scale=Math.floor(logSpan)
-			const remainder=logSpan-scale
-			let digit=1
-			if (remainder>Math.log10(5)) {
-				digit=5
-			} else if (remainder>Math.log10(2)) {
-				digit=2
-			}
-			const step=digit*10**scale
-			return [scale,step]
-		}
-		let svg=ex`<svg width="${viewSizeX}" height="${viewSizeY}">`
-		const writeMeshLines=(
-			xy:string,
-			scaleCoordRange:number,
-			coord1:number,
-			coord2:number,
-			calculatePixel:(coord:number)=>number,
-			calculateTextPixelAlong:()=>number,
-			calculateTextPixelAcross:(currentPixel:number)=>number
-		):void=>{
-			const [coordScale,coordStep]=calculateScaleAndStep(scaleCoordRange)
-			const coordBase=Math.ceil(coord1/coordStep)*coordStep
-			for (let i=0;;i++) {
-				const currentCoord=coordBase+i*coordStep
-				if (currentCoord>coord2) break
-				const currentPixel=calculatePixel(currentCoord)
-				svg+=ex`<line ${xy[0]}2="100%" ${xy[1]}1="${currentPixel+0.5}" ${xy[1]}2="${currentPixel+0.5}" />`
-				const coordString=currentCoord.toFixed(Math.max(0,-coordScale))
-				svg+=ex`<text ${xy[0]}="${calculateTextPixelAlong()}" ${xy[1]}="${calculateTextPixelAcross(currentPixel)}">${coordString}°</text>`
-			}
-		}
-		const textOffset=4
-		writeMeshLines(
-			'xy',lat1c-lat2c,lat2,lat1,
-			lat=>calculateY(z,lat)-y1,
-			()=>0.5+textOffset,
-			currentPixel=>currentPixel-textOffset
-		)
-		writeMeshLines(
-			'yx',lon2c-lon1c,lon1,lon2,
-			lon=>calculateX(z,lon)-x1,
-			()=>viewSizeY-0.5-textOffset,
-			currentPixel=>currentPixel+textOffset
-		)
-		svg+=`</svg>`
-		this.$mesh.innerHTML=svg
-	}
 }
 
 function calculateX(zoom:number,lon:number):number {
@@ -297,7 +311,7 @@ function calculateX(zoom:number,lon:number):number {
 function calculateY(zoom:number,lat:number):number {
 	return Math.floor(Math.pow(2,zoom+tileSizePow)*(1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2)
 }
-function calculatePosition(zoom:number,lat:number,lon:number):[x:number,y:number,z:number] {
+function calculatePosition(zoom:number,lat:number,lon:number):Position {
 	return [
 		calculateX(zoom,lon),
 		calculateY(zoom,lat),

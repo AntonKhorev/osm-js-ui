@@ -223,7 +223,7 @@ async function main() {
 			const zoom=parseInt(zoomString,10)
 			const lat=parseFloat(latString)
 			const lon=parseFloat(lonString)
-			if (!isNaN(zoom) && !isNaN(lat) && !isNaN(lon)) map.go(zoom,lat,lon)
+			if (!isNaN(zoom) && !isNaN(lat) && !isNaN(lon)) map.move(zoom,lat,lon)
 		}
 	}
 	$map.addEventListener('mapMoveEnd',ev=>{
