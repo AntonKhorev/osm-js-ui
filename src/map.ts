@@ -40,12 +40,22 @@ abstract class MapLayer {
 }
 
 class TileMapLayer extends MapLayer {
+	private previousPosition?:Position
+	private previousTileXL?:number
+	private previousTileXU?:number
+	private previousTileYL?:number
+	private previousTileYU?:number
 	constructor() {
 		super('tiles')
 	}
-	redraw([x,y,z]:Position,viewSizeX:number,viewSizeY:number) {
-		this.$layer.replaceChildren()
-		if (!this.visible) return
+	redraw(position:Position,viewSizeX:number,viewSizeY:number) {
+		if (!this.visible) {
+			this.previousPosition=undefined
+			this.previousTileXL=this.previousTileXU=undefined
+			this.previousTileYL=this.previousTileYU=undefined
+			return this.$layer.replaceChildren()
+		}
+		const [x,y,z]=position
 		const tileX=Math.floor(x/tileSize)
 		const tileY=Math.floor(y/tileSize)
 		const transX=-x%tileSize
@@ -64,14 +74,30 @@ class TileMapLayer extends MapLayer {
 			tileRange-tileY-1,
 			Math.floor((viewSizeY/2-transY)/tileSize)
 		)
-		for (let iTileY=-nExtraTilesYL;iTileY<=nExtraTilesYU;iTileY++) {
-			for (let iTileX=-nExtraTilesXL;iTileX<=nExtraTilesXU;iTileX++) {
-				const tileUrl=eu`https://tile.openstreetmap.org/${z}/${(tileX+iTileX)&tileMask}/${tileY+iTileY}.png`
-				const $img=document.createElement('img')
-				$img.src=tileUrl
-				$img.style.translate=`${transX+iTileX*tileSize}px ${transY+iTileY*tileSize}px`
-				this.$layer.append($img)
+		if (
+			this.previousPosition==null || this.previousPosition[2]!=z ||
+			this.previousTileXL!=tileX-nExtraTilesXL || this.previousTileXU!=tileX+nExtraTilesXU ||
+			this.previousTileYL!=tileY-nExtraTilesYL || this.previousTileYU!=tileX+nExtraTilesYU
+		) {
+			this.$layer.replaceChildren()
+			this.$layer.style.removeProperty('translate')
+			for (let iTileY=-nExtraTilesYL;iTileY<=nExtraTilesYU;iTileY++) {
+				for (let iTileX=-nExtraTilesXL;iTileX<=nExtraTilesXU;iTileX++) {
+					const tileUrl=eu`https://tile.openstreetmap.org/${z}/${(tileX+iTileX)&tileMask}/${tileY+iTileY}.png`
+					const $img=document.createElement('img')
+					$img.src=tileUrl
+					$img.style.translate=`${transX+iTileX*tileSize}px ${transY+iTileY*tileSize}px`
+					this.$layer.append($img)
+				}
 			}
+			this.previousPosition=position
+			this.previousTileXL=tileX-nExtraTilesXL
+			this.previousTileXU=tileX+nExtraTilesXU
+			this.previousTileYL=tileY-nExtraTilesYL
+			this.previousTileYU=tileX+nExtraTilesYU
+		} else {
+			const [px,py]=this.previousPosition
+			this.$layer.style.translate=`${px-x}px ${py-y}px`
 		}
 	}
 }
@@ -177,7 +203,7 @@ export default class MapPane {
 			$attribution
 		)
 
-		const resizeObserver=new ResizeObserver(()=>this.redrawMap())
+		const resizeObserver=new ResizeObserver(()=>this.redrawLayers())
 		resizeObserver.observe($map)
 
 		const pan=(dx:number,dy:number)=>{
@@ -188,7 +214,7 @@ export default class MapPane {
 				Math.min(mask,Math.max(0,(y+dy))),
 				z
 			]
-			this.redrawMap()
+			this.redrawLayers()
 		}
 		const zoom=(dx:number,dy:number,dz:number)=>{
 			let [x,y,z]=this.position
@@ -200,7 +226,7 @@ export default class MapPane {
 			x=Math.floor(f*x+(f-1)*dx)
 			y=Math.floor(f*y+(f-1)*dy)
 			this.position=[x,y,z]
-			this.redrawMap()
+			this.redrawLayers()
 		}
 		const mouseZoom=(ev:MouseEvent,dz:number)=>{
 			const viewHalfSizeX=$map.clientWidth/2
@@ -282,7 +308,7 @@ export default class MapPane {
 		let y1=Math.min(mask,Math.max(0,y))
 		this.position=[x1,y1,z]
 		if (zoom!=zoom1 || x!=x1 || y!=y1) this.reportMoveEnd()
-		this.redrawMap()
+		this.redrawLayers()
 	}
 	getLayers():[key:string,name:string,value:boolean][] {
 		return layerNames.map(([key,name])=>[key,name,true])
@@ -303,7 +329,7 @@ export default class MapPane {
 		})
 		this.$map.dispatchEvent(ev)
 	}
-	private redrawMap() {
+	private redrawLayers() {
 		for (const layer of this.layers.values()) {
 			layer.redraw(this.position,this.$map.clientWidth,this.$map.clientHeight)
 		}
