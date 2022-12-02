@@ -1,7 +1,7 @@
 import {makeElement, makeDiv} from './util'
 import Module from './module'
 
-export default class Sidebar {
+export default class SidebarPane {
 	private $heading=makeElement('h1')()()
 	private $content=makeDiv('content')()
 	constructor($sidebar: HTMLElement) {

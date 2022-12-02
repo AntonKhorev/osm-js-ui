@@ -13,10 +13,40 @@ const initialZoom=17
 const initialLat=59.93903
 const initialLon=30.31582
 
-export default class Map {
+const layerNames=[
+	['crosshair',`Crosshair`],
+	['mesh',`Coordinate grid`],
+	['zoom',`Zoom buttons`], // TODO this is not a layer
+	['attribution',`Attribution`],
+]
+
+abstract class MapLayer {
+	abstract get $layer():HTMLElement
+	toggle(isVisible:boolean) {
+		if (isVisible) {
+			this.$layer.style.removeProperty('display')
+		} else {
+			this.$layer.style.display='none'
+		}
+	}
+}
+
+class CrosshairMapLayer extends MapLayer {
+	public $layer=makeDiv('layer','crosshair')()
+	constructor() {
+		super()
+		this.$layer.innerHTML=`<svg><use href="#map-crosshair" /></svg>`
+	}
+}
+
+export default class MapPane {
 	private position=calculatePosition(initialZoom,initialLat,initialLon)
 	private readonly $tiles=makeDiv('layer','tiles')()
 	private readonly $mesh=makeDiv('layer','mesh')()
+	private enabledLayers:Map<string,boolean>=new Map(
+		layerNames.map(([key])=>[key,true])
+	)
+	private crosshair=new CrosshairMapLayer
 	constructor(private readonly $map: HTMLElement) {
 		const $zoomIn=makeButton(`Zoom in`,'zoom-in')
 		const $zoomOut=makeButton(`Zoom out`,'zoom-out')
@@ -24,14 +54,12 @@ export default class Map {
 
 		const $surface=makeDiv('surface')()
 		$surface.tabIndex=0
-		const $crosshair=makeDiv('layer','crosshair')()
-		$crosshair.innerHTML=`<svg><use href="#map-crosshair" /></svg>`
 		const $attribution=makeDiv('attribution')(
 			`© `,makeLink(`OpenStreetMap contributors`,`https://www.openstreetmap.org/copyright`)
 		)
 		$map.append(
 			$zoomButtons,$surface,
-			this.$tiles,this.$mesh,$crosshair,$attribution
+			this.$tiles,this.$mesh,this.crosshair.$layer,$attribution
 		)
 
 		const resizeObserver=new ResizeObserver(()=>this.redrawMap())
@@ -142,16 +170,13 @@ export default class Map {
 		this.redrawMap()
 	}
 	getLayers():[key:string,name:string,value:boolean][] {
-		const layers=[
-			['crosshair',`Crosshair`],
-			['mesh',`Coordinate grid`],
-			['zoom',`Zoom buttons`],
-			['attribution',`Attribution`],
-		]
-		return layers.map(([key,name])=>[key,name,true])
+		return layerNames.map(([key,name])=>[key,name,true])
 	}
-	setLayers(layers:[key:string,value:boolean][]):void {
-		// TODO
+	toggleLayer(key:string,value:boolean):void {
+		this.enabledLayers.set(key,value)
+		if (key=='crosshair') {
+			this.crosshair.toggle(value)
+		}
 	}
 	private reportMoveEnd() {
 		const ev=new CustomEvent<Coordinates>('mapMoveEnd',{

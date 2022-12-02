@@ -1,9 +1,9 @@
 import Module from '../module'
-import Map from '../map'
-import {Content, makeElement} from '../util'
+import MapPane from '../map'
+import {Content, makeElement, makeDiv} from '../util'
 
 export default class SettingsModule extends Module {
-	constructor(private map:Map) {
+	constructor(private map:MapPane) {
 		super()
 	}
 	makeHeading():Content {
@@ -17,7 +17,12 @@ export default class SettingsModule extends Module {
 			const $layerCheckbox=document.createElement('input')
 			$layerCheckbox.type='checkbox'
 			$layerCheckbox.checked=value
-			makeElement('label')()($layerCheckbox,name)
+			$layerCheckbox.oninput=()=>{
+				this.map.toggleLayer(key,$layerCheckbox.checked)
+			}
+			content.push(makeDiv()(
+				makeElement('label')()($layerCheckbox,name)
+			))
 		}
 		return content
 	}

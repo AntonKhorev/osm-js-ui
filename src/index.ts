@@ -1,5 +1,5 @@
-import Sidebar from './sidebar'
-import Map, {Coordinates} from './map'
+import SidebarPane from './sidebar'
+import MapPane, {Coordinates} from './map'
 import {makeDiv, makeButton} from './util'
 import MenuModule from './modules/menu'
 import TestModule from './modules/test'
@@ -19,11 +19,11 @@ async function main() {
 
 	const $sidebarTopButtons=makeDiv('buttons','top')()
 	const $sidebar=makeDiv('sidebar')($sidebarTopButtons)
-	const sidebar=new Sidebar($sidebar)
+	const sidebar=new SidebarPane($sidebar)
 	sidebar.setModule(new TestModule)
 	const $mapTopButtons=makeDiv('buttons','top')()
 	const $map=makeDiv('map')($mapTopButtons)
-	const map=new Map($map)
+	const map=new MapPane($map)
 
 	const $ui=makeDiv('ui','with-sidebar','with-map')($sidebar,$map)
 	document.body.append($ui)
