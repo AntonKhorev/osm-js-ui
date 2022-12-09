@@ -229,7 +229,8 @@ async function main() {
 	$map.addEventListener('mapMoveEnd',ev=>{
 		const hashParams=getHashParams()
 		const [zoom,lat,lon]=(<CustomEvent<Coordinates>>ev).detail
-		hashParams.set('map',`${zoom.toFixed(0)}/${lat.toFixed(5)}/${lon.toFixed(5)}`)
+		const precision=Math.max(0,Math.ceil(Math.log2(zoom)))
+		hashParams.set('map',`${zoom.toFixed(0)}/${lat.toFixed(precision)}/${lon.toFixed(precision)}`)
 		history.replaceState(null,'',encodeHashParams(hashParams))
 	})
 }
