@@ -8,6 +8,7 @@ const ex=makeEscapeTag(escapeXml)
 
 const tileSize=256
 const tileSizePow=8
+const animationCurveParameter=0.002 // [px/ms^2]
 
 const maxZoom=19
 const initialZoom=17
@@ -232,26 +233,52 @@ export default class MapPane {
 			zoom(dx,dy,dz)
 		}
 
-		let moveLastX:number|undefined
-		let moveLastY:number|undefined
+		let dragTime:number|undefined
+		let dragX:number|undefined
+		let dragY:number|undefined
+		let dragSpeedX:number|undefined
+		let dragSpeedY:number|undefined
+		const updateDragKinetics=(dx:number,dy:number)=>{
+			if (dragTime==null) return
+			if (dragSpeedX==null || dragSpeedY==null) return
+			const t=performance.now()
+			const dt=t-dragTime
+			const decayRate=0.003
+			const decay=Math.exp(-decayRate*dt)
+			dragSpeedX=dragSpeedX*decay+dx/dt*(1-decay)
+			dragSpeedY=dragSpeedY*decay+dy/dt*(1-decay)
+			dragTime=t
+		}
 		$surface.onpointerdown=ev=>{
 			this.stopAnimation()
-			moveLastX=ev.clientX
-			moveLastY=ev.clientY
+			dragTime=performance.now()
+			dragX=ev.clientX
+			dragY=ev.clientY
+			dragSpeedX=dragSpeedY=0
 			$surface.setPointerCapture(ev.pointerId)
 			$surface.classList.add('grabbed')
 		}
 		$surface.onpointerup=ev=>{
 			$surface.classList.remove('grabbed')
 			$surface.releasePointerCapture(ev.pointerId)
-			moveLastX=moveLastY=undefined
-			this.reportMoveEnd()
+			updateDragKinetics(0,0)
+			if (dragSpeedX && dragSpeedY) {
+				this.startFlingAnimation(dragSpeedX,dragSpeedY)
+			} else {
+				this.reportMoveEnd()
+			}
+			dragTime=undefined
+			dragX=dragY=undefined
+			dragSpeedX=dragSpeedY=undefined
 		}
 		$surface.onpointermove=ev=>{
-			if (moveLastX==null || moveLastY==null) return
-			pan(moveLastX-ev.clientX,moveLastY-ev.clientY)
-			moveLastX=ev.clientX
-			moveLastY=ev.clientY
+			if (dragX==null || dragY==null) return
+			const dx=dragX-ev.clientX
+			const dy=dragY-ev.clientY
+			pan(dx,dy)
+			dragX=ev.clientX
+			dragY=ev.clientY
+			updateDragKinetics(dx,dy)
 		}
 
 		$surface.onwheel=ev=>{
@@ -283,16 +310,16 @@ export default class MapPane {
 			const panStep=panStepBase*multiplier
 			if (ev.key=='ArrowLeft') {
 				this.stopAnimation()
-				this.startAnimation(-panStep,0)
+				this.startStepAnimation(-panStep,0)
 			} else if (ev.key=='ArrowRight') {
 				this.stopAnimation()
-				this.startAnimation(+panStep,0)
+				this.startStepAnimation(+panStep,0)
 			} else if (ev.key=='ArrowUp') {
 				this.stopAnimation()
-				this.startAnimation(0,-panStep)
+				this.startStepAnimation(0,-panStep)
 			} else if (ev.key=='ArrowDown') {
 				this.stopAnimation()
-				this.startAnimation(0,+panStep)
+				this.startStepAnimation(0,+panStep)
 			} else if (ev.key=='+') {
 				this.stopAnimation()
 				zoom(0,0,+multiplier)
@@ -327,10 +354,25 @@ export default class MapPane {
 			layer.hide()
 		}
 	}
-	private startAnimation(dx:number,dy:number) {
-		const animationCurveParameter=0.002 // [px/ms^2]
+	private startStepAnimation(dx:number,dy:number) {
 		const dp=Math.sqrt(dx**2+dy**2)
 		const dt=Math.sqrt(dp/animationCurveParameter)
+		this.startAnimation(dt,dp,dx,dy)
+	}
+	private startFlingAnimation(speedX:number,speedY:number) {
+		const speed=Math.sqrt(speedX**2+speedY**2)
+		const dt=speed/(2*animationCurveParameter)
+		const dp=animationCurveParameter*dt**2
+		const dragStepThreshold=32 // [px]
+		if (dp<dragStepThreshold) {
+			this.reportMoveEnd()
+		} else {
+			const dx=dp*speedX/speed
+			const dy=dp*speedY/speed
+			this.startAnimation(dt,dp,dx,dy)
+		}
+	}
+	private startAnimation(dt:number,dp:number,dx:number,dy:number) {
 		const [x0,y0,z]=this.position
 		const t0=performance.now()
 		const animateFrame=(time:number)=>{
