@@ -311,12 +311,8 @@ export default class MapPane {
 	move(zoom:number,lat:number,lon:number):void {
 		this.stopAnimation()
 		const zoom1=Math.min(maxZoom,Math.max(0,zoom))
-		const [x,y,z]=calculatePosition(zoom1,lat,lon)
-		const mask=Math.pow(2,z+tileSizePow)-1
-		const x1=x&mask
-		let y1=Math.min(mask,Math.max(0,y))
-		this.position=[x1,y1,z]
-		if (zoom!=zoom1 || x!=x1 || y!=y1) this.reportMoveEnd()
+		this.setPosition(...calculatePosition(zoom1,lat,lon))
+		this.reportMoveEnd()
 		this.redrawLayers()
 	}
 	getLayers():[key:string,name:string,value:boolean][] {
