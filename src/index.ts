@@ -226,7 +226,7 @@ async function main() {
 			if (!isNaN(zoom) && !isNaN(lat) && !isNaN(lon)) map.move(zoom,lat,lon)
 		}
 	}
-	$map.addEventListener('mapMoveEnd',ev=>{
+	$map.addEventListener('osmJsUi:mapMoveEnd',ev=>{
 		const hashParams=getHashParams()
 		const [zoom,lat,lon]=(<CustomEvent<Coordinates>>ev).detail
 		const precision=Math.max(0,Math.ceil(Math.log2(zoom)))

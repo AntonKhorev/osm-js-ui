@@ -355,7 +355,7 @@ export default class MapPane {
 		this.animationRequestId=undefined
 	}
 	private reportMoveEnd() {
-		const ev=new CustomEvent<Coordinates>('mapMoveEnd',{
+		const ev=new CustomEvent<Coordinates>('osmJsUi:mapMoveEnd',{
 			bubbles: true,
 			detail: calculateCoords(...this.position)
 		})
