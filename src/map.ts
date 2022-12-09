@@ -182,6 +182,7 @@ class GridMapLayer extends MapLayer {
 
 export default class MapPane {
 	private position=calculatePosition(initialZoom,initialLat,initialLon)
+	private animationRequestId:number|undefined
 	private readonly layers:Map<string,MapLayer>=new Map([
 		['tiles',new TileMapLayer],
 		['crosshair',new CrosshairMapLayer],
@@ -208,12 +209,7 @@ export default class MapPane {
 
 		const pan=(dx:number,dy:number)=>{
 			const [x,y,z]=this.position
-			const mask=Math.pow(2,z+tileSizePow)-1
-			this.position=[
-				(x+dx)&mask,
-				Math.min(mask,Math.max(0,(y+dy))),
-				z
-			]
+			this.setPosition(x+dx,y+dy,z)
 			this.redrawLayers()
 		}
 		const zoom=(dx:number,dy:number,dz:number)=>{
@@ -239,6 +235,7 @@ export default class MapPane {
 		let moveLastX:number|undefined
 		let moveLastY:number|undefined
 		$surface.onpointerdown=ev=>{
+			this.stopAnimation()
 			moveLastX=ev.clientX
 			moveLastY=ev.clientY
 			$surface.setPointerCapture(ev.pointerId)
@@ -258,20 +255,24 @@ export default class MapPane {
 		}
 
 		$surface.onwheel=ev=>{
+			this.stopAnimation()
 			const dz=-Math.sign(ev.deltaY)
 			if (!dz) return
 			mouseZoom(ev,dz)
 			this.reportMoveEnd()
 		}
 		$surface.ondblclick=ev=>{
+			this.stopAnimation()
 			mouseZoom(ev,ev.shiftKey?-1:+1)
 			this.reportMoveEnd()
 		}
 		$zoomIn.onclick=()=>{
+			this.stopAnimation()
 			zoom(0,0,+1)
 			this.reportMoveEnd()
 		}
 		$zoomOut.onclick=()=>{
+			this.stopAnimation()
 			zoom(0,0,-1)
 			this.reportMoveEnd()
 		}
@@ -281,26 +282,34 @@ export default class MapPane {
 			const multiplier=ev.shiftKey?3:1
 			const panStep=panStepBase*multiplier
 			if (ev.key=='ArrowLeft') {
-				pan(-panStep,0)
+				this.stopAnimation()
+				this.startAnimation(-panStep,0)
 			} else if (ev.key=='ArrowRight') {
-				pan(+panStep,0)
+				this.stopAnimation()
+				this.startAnimation(+panStep,0)
 			} else if (ev.key=='ArrowUp') {
-				pan(0,-panStep)
+				this.stopAnimation()
+				this.startAnimation(0,-panStep)
 			} else if (ev.key=='ArrowDown') {
-				pan(0,+panStep)
+				this.stopAnimation()
+				this.startAnimation(0,+panStep)
 			} else if (ev.key=='+') {
+				this.stopAnimation()
 				zoom(0,0,+multiplier)
+				this.reportMoveEnd()
 			} else if (ev.key=='-') {
+				this.stopAnimation()
 				zoom(0,0,-multiplier)
+				this.reportMoveEnd()
 			} else {
 				return
 			}
-			this.reportMoveEnd()
 			ev.stopPropagation()
 			ev.preventDefault()
 		}
 	}
 	move(zoom:number,lat:number,lon:number):void {
+		this.stopAnimation()
 		const zoom1=Math.min(maxZoom,Math.max(0,zoom))
 		const [x,y,z]=calculatePosition(zoom1,lat,lon)
 		const mask=Math.pow(2,z+tileSizePow)-1
@@ -322,6 +331,33 @@ export default class MapPane {
 			layer.hide()
 		}
 	}
+	private startAnimation(dx:number,dy:number) {
+		const animationCurveParameter=0.002 // [px/ms^2]
+		const dp=Math.sqrt(dx**2+dy**2)
+		const dt=Math.sqrt(dp/animationCurveParameter)
+		const [x0,y0,z]=this.position
+		const t0=performance.now()
+		const animateFrame=(time:number)=>{
+			let remainingTime=t0+dt-time
+			if (remainingTime<=0) {
+				remainingTime=0
+				this.stopAnimation()
+			} else {
+				this.animationRequestId=requestAnimationFrame(animateFrame)
+			}
+			const x=x0+dx-dx/dp*animationCurveParameter*remainingTime**2
+			const y=y0+dy-dy/dp*animationCurveParameter*remainingTime**2
+			this.setPosition(x,y,z)
+			this.redrawLayers()
+		}
+		this.animationRequestId=requestAnimationFrame(animateFrame)
+	}
+	private stopAnimation() {
+		if (!this.animationRequestId) return
+		cancelAnimationFrame(this.animationRequestId)
+		this.reportMoveEnd()
+		this.animationRequestId=undefined
+	}
 	private reportMoveEnd() {
 		const ev=new CustomEvent<Coordinates>('mapMoveEnd',{
 			bubbles: true,
@@ -333,6 +369,14 @@ export default class MapPane {
 		for (const layer of this.layers.values()) {
 			layer.redraw(this.position,this.$map.clientWidth,this.$map.clientHeight)
 		}
+	}
+	private setPosition(x:number,y:number,z:number) {
+		const mask=Math.pow(2,z+tileSizePow)-1
+		this.position=[
+			x&mask,
+			Math.min(mask,Math.max(0,y)),
+			z
+		]
 	}
 }
 
