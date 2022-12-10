@@ -184,6 +184,7 @@ class GridMapLayer extends MapLayer {
 export default class MapPane {
 	private position=calculatePosition(initialZoom,initialLat,initialLon)
 	private animationRequestId:number|undefined
+	private animationConstantSpeedPhase:boolean|undefined
 	private readonly layers:Map<string,MapLayer>=new Map([
 		['tiles',new TileMapLayer],
 		['crosshair',new CrosshairMapLayer],
@@ -308,18 +309,21 @@ export default class MapPane {
 			const panStepBase=32
 			const multiplier=ev.shiftKey?3:1
 			const panStep=panStepBase*multiplier
+			const animateArrowKey=(dx:number,dy:number)=>{
+				if (ev.repeat) {
+					this.startConstantSpeedAnimation(dx,dy)
+				} else {
+					this.startStepAnimation(dx,dy)
+				}
+			}
 			if (ev.key=='ArrowLeft') {
-				this.stopAnimation()
-				this.startStepAnimation(-panStep,0)
+				animateArrowKey(-panStep,0)
 			} else if (ev.key=='ArrowRight') {
-				this.stopAnimation()
-				this.startStepAnimation(+panStep,0)
+				animateArrowKey(+panStep,0)
 			} else if (ev.key=='ArrowUp') {
-				this.stopAnimation()
-				this.startStepAnimation(0,-panStep)
+				animateArrowKey(0,-panStep)
 			} else if (ev.key=='ArrowDown') {
-				this.stopAnimation()
-				this.startStepAnimation(0,+panStep)
+				animateArrowKey(0,+panStep)
 			} else if (ev.key=='+') {
 				this.stopAnimation()
 				zoom(0,0,+multiplier)
@@ -333,6 +337,15 @@ export default class MapPane {
 			}
 			ev.stopPropagation()
 			ev.preventDefault()
+		}
+
+		$surface.onkeyup=ev=>{
+			if ( // TODO separate animation states for each axis
+				ev.key=='ArrowLeft' || ev.key=='ArrowRight' ||
+				ev.key=='ArrowUp' || ev.key=='ArrowDown'
+			) {
+				this.transitionToDecayAnimation()
+			}
 		}
 	}
 	move(zoom:number,lat:number,lon:number):void {
@@ -354,10 +367,15 @@ export default class MapPane {
 			layer.hide()
 		}
 	}
+	private startConstantSpeedAnimation(dx:number,dy:number) {
+		const dp=Math.sqrt(dx**2+dy**2)
+		const dt=Math.sqrt(dp/animationCurveParameter)
+		this.startAnimation(dx,dy,dp,dt,1000)
+	}
 	private startStepAnimation(dx:number,dy:number) {
 		const dp=Math.sqrt(dx**2+dy**2)
 		const dt=Math.sqrt(dp/animationCurveParameter)
-		this.startAnimation(dt,dp,dx,dy)
+		this.startAnimation(dx,dy,dp,dt)
 	}
 	private startFlingAnimation(speedX:number,speedY:number) {
 		const speed=Math.sqrt(speedX**2+speedY**2)
@@ -369,32 +387,56 @@ export default class MapPane {
 		} else {
 			const dx=dp*speedX/speed
 			const dy=dp*speedY/speed
-			this.startAnimation(dt,dp,dx,dy)
+			this.startAnimation(dx,dy,dp,dt)
 		}
 	}
-	private startAnimation(dt:number,dp:number,dx:number,dy:number) {
+	private startAnimation(dx:number,dy:number,dp:number,decayDuration:number,constantSpeedPhaseDuration:number=0) {
+		if (this.animationRequestId) {
+			cancelAnimationFrame(this.animationRequestId)
+		}
+		this.animationConstantSpeedPhase=constantSpeedPhaseDuration>0
 		const [x0,y0,z]=this.position
-		const t0=performance.now()
+		const startTime=performance.now()
+		let decayStartTime=startTime+constantSpeedPhaseDuration
 		const animateFrame=(time:number)=>{
-			let remainingTime=t0+dt-time
-			if (remainingTime<=0) {
-				remainingTime=0
-				this.stopAnimation()
-			} else {
-				this.animationRequestId=requestAnimationFrame(animateFrame)
+			let x=x0
+			let y=y0
+			if (time<decayStartTime) {
+				if (!this.animationConstantSpeedPhase) {
+					decayStartTime=time
+				}
+				x+=dx/dp*(time-startTime)
+				y+=dy/dp*(time-startTime)
 			}
-			const x=x0+dx-dx/dp*animationCurveParameter*remainingTime**2
-			const y=y0+dy-dy/dp*animationCurveParameter*remainingTime**2
+			if (time>=decayStartTime) {
+				let decayRemainingTime=decayDuration-(time-decayStartTime)
+				if (decayRemainingTime<=0) {
+					decayRemainingTime=0
+				}
+				x+=dx-dx/dp*animationCurveParameter*decayRemainingTime**2
+				y+=dy-dy/dp*animationCurveParameter*decayRemainingTime**2
+			}
 			this.setPosition(x,y,z)
 			this.redrawLayers()
+			if (time<decayStartTime+decayDuration) {
+				this.animationRequestId=requestAnimationFrame(animateFrame)
+			} else {
+				this.stopAnimation()
+			}
 		}
 		this.animationRequestId=requestAnimationFrame(animateFrame)
+	}
+	private transitionToDecayAnimation() {
+		if (this.animationConstantSpeedPhase) {
+			this.animationConstantSpeedPhase=false
+		}
 	}
 	private stopAnimation() {
 		if (!this.animationRequestId) return
 		cancelAnimationFrame(this.animationRequestId)
 		this.reportMoveEnd()
 		this.animationRequestId=undefined
+		this.animationConstantSpeedPhase=undefined
 	}
 	private reportMoveEnd() {
 		const ev=new CustomEvent<Coordinates>('osmJsUi:mapMoveEnd',{
