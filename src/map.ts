@@ -190,17 +190,13 @@ class AnimationAxisState {
 		public decayStartTime:number,
 		public decayDuration:number
 	) {}
-	// static makeStep(startAxisPosition:number,decayAxisDistance:number,startTime:number):AnimationAxisState {
-	// 	const decayDuration=Math.sqrt(decayAxisDistance/animationCurveParameter)
-	// 	return new AnimationAxisState(
-	// 		startAxisPosition,decayAxisDistance,decayAxisDistance,
-	// 		startTime,startTime,decayDuration
-	// 	)
-	// }
 	transitionToDecay(time:number):void {
 		if (time<this.decayStartTime) {
 			this.decayStartTime=time
 		}
+	}
+	isLinear(time:number):boolean {
+		return time<this.decayStartTime
 	}
 	isEnded(time:number):boolean {
 		return time>=this.decayStartTime+this.decayDuration
@@ -230,9 +226,9 @@ class Animation {
 	private requestId:number|undefined
 	private _xAxis:AnimationAxisState|undefined
 	private _yAxis:AnimationAxisState|undefined
-	private animateFrame:(time:number)=>void
+	private readonly animateFrame:(time:number)=>void
 	constructor(
-		getPosition:()=>[x:number,y:number],
+		private readonly getPosition:()=>[x:number,y:number],
 		updateCallback:(x:number,y:number)=>void,
 		endCallback:()=>void
 	){
@@ -279,6 +275,41 @@ class Animation {
 	stop() {
 		this.xAxis=undefined
 		this.yAxis=undefined
+	}
+	stepX(decayAxisDistance:number) {
+		const [x,y]=this.getPosition()
+		this.xAxis=this.makeSingleAxisState(x,decayAxisDistance)
+	}
+	stepY(decayAxisDistance:number) {
+		const [x,y]=this.getPosition()
+		this.yAxis=this.makeSingleAxisState(y,decayAxisDistance)
+	}
+	linearStepX(decayAxisDistance:number,linearPhaseDuration:number) {
+		const startTime=performance.now()
+		if (this.xAxis && this.xAxis.isLinear(startTime)) {
+			this.xAxis.decayStartTime=startTime+linearPhaseDuration
+		} else {
+			const [x,y]=this.getPosition()
+			this.xAxis=this.makeSingleAxisState(x,decayAxisDistance,linearPhaseDuration)
+		}
+	}
+	linearStepY(decayAxisDistance:number,linearPhaseDuration:number) {
+		const startTime=performance.now()
+		if (this.yAxis && this.yAxis.isLinear(startTime)) {
+			this.yAxis.decayStartTime=startTime+linearPhaseDuration
+		} else {
+			const [x,y]=this.getPosition()
+			this.yAxis=this.makeSingleAxisState(y,decayAxisDistance,linearPhaseDuration)
+		}
+	}
+	private makeSingleAxisState(startAxisPosition:number,decayAxisDistance:number,linearPhaseDuration:number=0):AnimationAxisState {
+		const decayTotalDistance=Math.abs(decayAxisDistance)
+		const decayDuration=Math.sqrt(decayTotalDistance/animationCurveParameter)
+		const startTime=performance.now()
+		return new AnimationAxisState(
+			startAxisPosition,decayAxisDistance,decayTotalDistance,
+			startTime,startTime+linearPhaseDuration,decayDuration
+		)
 	}
 }
 
@@ -424,22 +455,28 @@ export default class MapPane {
 			const panStepBase=64
 			const multiplier=ev.shiftKey?3:1
 			const panStep=panStepBase*multiplier
-			const animateArrowKey=(dx:number,dy:number)=>{
+			const animateArrowKeyX=(dx:number)=>{
 				if (ev.repeat) {
-					// TODO check if animation is in linear phase, extend it if yes
-					this.startConstantSpeedAnimation(dx,dy)
+					this.panAnimation.linearStepX(dx,1000)
 				} else {
-					this.startStepAnimation(dx,dy)
+					this.panAnimation.stepX(dx)
+				}
+			}
+			const animateArrowKeyY=(dy:number)=>{
+				if (ev.repeat) {
+					this.panAnimation.linearStepY(dy,1000)
+				} else {
+					this.panAnimation.stepY(dy)
 				}
 			}
 			if (ev.key=='ArrowLeft') {
-				animateArrowKey(-panStep,0)
+				animateArrowKeyX(-panStep)
 			} else if (ev.key=='ArrowRight') {
-				animateArrowKey(+panStep,0)
+				animateArrowKeyX(+panStep)
 			} else if (ev.key=='ArrowUp') {
-				animateArrowKey(0,-panStep)
+				animateArrowKeyY(-panStep)
 			} else if (ev.key=='ArrowDown') {
-				animateArrowKey(0,+panStep)
+				animateArrowKeyY(+panStep)
 			} else if (ev.key=='+') {
 				this.panAnimation.stop()
 				zoom(0,0,+multiplier)
@@ -486,16 +523,6 @@ export default class MapPane {
 		} else {
 			layer.hide()
 		}
-	}
-	private startConstantSpeedAnimation(dx:number,dy:number) {
-		const dp=Math.sqrt(dx**2+dy**2)
-		const dt=Math.sqrt(dp/animationCurveParameter)
-		this.startAnimation(dx,dy,dp,dt,1000)
-	}
-	private startStepAnimation(dx:number,dy:number) {
-		const dp=Math.sqrt(dx**2+dy**2)
-		const dt=Math.sqrt(dp/animationCurveParameter)
-		this.startAnimation(dx,dy,dp,dt)
 	}
 	private startFlingAnimation(speedX:number,speedY:number) {
 		const speed=Math.sqrt(speedX**2+speedY**2)
