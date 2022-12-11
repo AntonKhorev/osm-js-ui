@@ -181,7 +181,7 @@ class GridMapLayer extends MapLayer {
 	}
 }
 
-class PanAxisAnimation {
+class AnimationAxisState {
 	constructor(
 		public startAxisPosition:number,
 		public decayAxisDistance:number,
@@ -190,6 +190,13 @@ class PanAxisAnimation {
 		public decayStartTime:number,
 		public decayDuration:number
 	) {}
+	// static makeStep(startAxisPosition:number,decayAxisDistance:number,startTime:number):AnimationAxisState {
+	// 	const decayDuration=Math.sqrt(decayAxisDistance/animationCurveParameter)
+	// 	return new AnimationAxisState(
+	// 		startAxisPosition,decayAxisDistance,decayAxisDistance,
+	// 		startTime,startTime,decayDuration
+	// 	)
+	// }
 	transitionToDecay(time:number):void {
 		if (time<this.decayStartTime) {
 			this.decayStartTime=time
@@ -219,10 +226,80 @@ class PanAxisAnimation {
 	}
 }
 
+class Animation {
+	private requestId:number|undefined
+	private _xAxis:AnimationAxisState|undefined
+	private _yAxis:AnimationAxisState|undefined
+	private animateFrame:(time:number)=>void
+	constructor(
+		getPosition:()=>[x:number,y:number],
+		updateCallback:(x:number,y:number)=>void,
+		endCallback:()=>void
+	){
+		this.animateFrame=(time:number)=>{
+			let [x,y]=getPosition()
+			let needUpdate=false
+			if (this.xAxis) {
+				x=this.xAxis.getAxisPosition(time)
+				if (this.xAxis.isEnded(time)) {
+					this.xAxis=undefined
+				}
+				needUpdate=true
+			}
+			if (this.yAxis) {
+				y=this.yAxis.getAxisPosition(time)
+				if (this.yAxis.isEnded(time)) {
+					this.yAxis=undefined
+				}
+				needUpdate=true
+			}
+			if (needUpdate) {
+				updateCallback(x,y)
+			}
+			if (this.xAxis || this.yAxis) {
+				this.requestId=requestAnimationFrame(this.animateFrame)
+			} else {
+				this.requestId=undefined
+				endCallback()
+			}
+		}
+	}
+	get xAxis() { return this._xAxis }
+	get yAxis() { return this._yAxis }
+	set xAxis(xAxis:AnimationAxisState|undefined) {
+		this._xAxis=xAxis
+		if (this.requestId) return
+		this.requestId=requestAnimationFrame(this.animateFrame)
+	}
+	set yAxis(yAxis:AnimationAxisState|undefined) {
+		this._yAxis=yAxis
+		if (this.requestId) return
+		this.requestId=requestAnimationFrame(this.animateFrame)
+	}
+	stop() {
+		this.xAxis=undefined
+		this.yAxis=undefined
+	}
+}
+
 export default class MapPane {
 	private position=calculatePosition(initialZoom,initialLat,initialLon)
-	private panAnimationX:PanAxisAnimation|undefined
-	private panAnimationY:PanAxisAnimation|undefined
+
+	private panAnimation:Animation=new Animation(
+		()=>{
+			const [x,y]=this.position
+			return [x,y]
+		},
+		(x,y)=>{
+			const [,,z]=this.position
+			this.setPosition(x,y,z)
+			this.redrawLayers()
+		},
+		()=>{
+			this.reportMoveEnd()
+		}
+	)
+	
 	private readonly layers:Map<string,MapLayer>=new Map([
 		['tiles',new TileMapLayer],
 		['crosshair',new CrosshairMapLayer],
@@ -289,7 +366,7 @@ export default class MapPane {
 			dragTime=t
 		}
 		$surface.onpointerdown=ev=>{
-			this.stopAnimation()
+			this.panAnimation.stop()
 			dragTime=performance.now()
 			dragX=ev.clientX
 			dragY=ev.clientY
@@ -321,24 +398,24 @@ export default class MapPane {
 		}
 
 		$surface.onwheel=ev=>{
-			this.stopAnimation()
+			this.panAnimation.stop()
 			const dz=-Math.sign(ev.deltaY)
 			if (!dz) return
 			mouseZoom(ev,dz)
 			this.reportMoveEnd()
 		}
 		$surface.ondblclick=ev=>{
-			this.stopAnimation()
+			this.panAnimation.stop()
 			mouseZoom(ev,ev.shiftKey?-1:+1)
 			this.reportMoveEnd()
 		}
 		$zoomIn.onclick=()=>{
-			this.stopAnimation()
+			this.panAnimation.stop()
 			zoom(0,0,+1)
 			this.reportMoveEnd()
 		}
 		$zoomOut.onclick=()=>{
-			this.stopAnimation()
+			this.panAnimation.stop()
 			zoom(0,0,-1)
 			this.reportMoveEnd()
 		}
@@ -364,11 +441,11 @@ export default class MapPane {
 			} else if (ev.key=='ArrowDown') {
 				animateArrowKey(0,+panStep)
 			} else if (ev.key=='+') {
-				this.stopAnimation()
+				this.panAnimation.stop()
 				zoom(0,0,+multiplier)
 				this.reportMoveEnd()
 			} else if (ev.key=='-') {
-				this.stopAnimation()
+				this.panAnimation.stop()
 				zoom(0,0,-multiplier)
 				this.reportMoveEnd()
 			} else {
@@ -381,18 +458,18 @@ export default class MapPane {
 		$surface.onkeyup=ev=>{
 			const time=performance.now()
 			if (ev.key=='ArrowLeft' || ev.key=='ArrowRight') {
-				if (this.panAnimationX) {
-					this.panAnimationX.transitionToDecay(time)
+				if (this.panAnimation.xAxis) {
+					this.panAnimation.xAxis.transitionToDecay(time)
 				}
 			} else if (ev.key=='ArrowUp' || ev.key=='ArrowDown') {
-				if (this.panAnimationY) {
-					this.panAnimationY.transitionToDecay(time)
+				if (this.panAnimation.yAxis) {
+					this.panAnimation.yAxis.transitionToDecay(time)
 				}
 			}
 		}
 	}
 	move(zoom:number,lat:number,lon:number):void {
-		this.stopAnimation()
+		this.panAnimation.stop()
 		const zoom1=Math.min(maxZoom,Math.max(0,zoom))
 		this.setPosition(...calculatePosition(zoom1,lat,lon))
 		this.reportMoveEnd()
@@ -437,48 +514,22 @@ export default class MapPane {
 		const [x0,y0]=this.position
 		const startTime=performance.now()
 		if (dx) {
-			this.panAnimationX=new PanAxisAnimation(
+			this.panAnimation.xAxis=new AnimationAxisState(
 				x0,dx,dp,
 				startTime,startTime+constantSpeedPhaseDuration,decayDuration
 			)
 		} else {
-			this.panAnimationX=undefined
+			this.panAnimation.xAxis=undefined
 		}
 		if (dy) {
-			this.panAnimationY=new PanAxisAnimation(
+			this.panAnimation.yAxis=new AnimationAxisState(
 				y0,dy,dp,
 				startTime,startTime+constantSpeedPhaseDuration,decayDuration
 			)
 		} else {
-			this.panAnimationY=undefined
+			this.panAnimation.yAxis=undefined
 		}
-		const animateFrame=(time:number)=>{
-			let [x,y,z]=this.position
-			if (this.panAnimationX) {
-				x=this.panAnimationX.getAxisPosition(time)
-				if (this.panAnimationX.isEnded(time)) {
-					this.panAnimationX=undefined
-				}
-			}
-			if (this.panAnimationY) {
-				y=this.panAnimationY.getAxisPosition(time)
-				if (this.panAnimationY.isEnded(time)) {
-					this.panAnimationY=undefined
-				}
-			}
-			this.setPosition(x,y,z)
-			this.redrawLayers()
-			if (this.panAnimationX || this.panAnimationY) {
-				requestAnimationFrame(animateFrame)
-			} else {
-				this.reportMoveEnd()
-			}
-		}
-		requestAnimationFrame(animateFrame)
-	}
-	private stopAnimation() {
-		this.panAnimationX=undefined
-		this.panAnimationY=undefined
+		
 	}
 	private reportMoveEnd() {
 		const ev=new CustomEvent<Coordinates>('osmJsUi:mapMoveEnd',{
