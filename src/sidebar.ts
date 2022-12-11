@@ -1,4 +1,4 @@
-import {makeElement, makeDiv} from './util'
+import {makeElement, makeDiv} from './html'
 import Module from './module'
 
 export default class SidebarPane {

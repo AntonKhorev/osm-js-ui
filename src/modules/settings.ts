@@ -1,6 +1,6 @@
 import Module from '../module'
 import MapPane from '../map'
-import {Content, makeElement, makeDiv} from '../util'
+import {Content, makeElement, makeDiv} from '../html'
 
 export default class SettingsModule extends Module {
 	constructor(private map:MapPane) {

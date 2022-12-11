@@ -1,5 +1,6 @@
 import Animation from './animation'
-import {makeEscapeTag, escapeXml, makeDiv, makeButton, makeLink} from './util'
+import {makeEscapeTag, escapeXml} from './escape'
+import {makeDiv, makeButton, makeLink} from './html'
 
 export type Coordinates = [zoom:number, lat:number, lon:number]
 export type Position = [x:number,y:number,z:number]

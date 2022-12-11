@@ -1,5 +1,5 @@
 import Module from '../module'
-import {Content, makeElement, makeLink} from '../util'
+import {Content, makeElement, makeLink} from '../html'
 
 export default class MenuModule extends Module {
 	makeHeading():Content {
