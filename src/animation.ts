@@ -118,6 +118,22 @@ export default class Animation {
 			)
 		}
 	}
+	stepTo(targetX:number,targetY:number) {
+		const [x,y]=this.getPosition()
+		const dx=targetX-x
+		const dy=targetY-y
+		const decayDistance=Math.sqrt(dx**2+dy**2)
+		const decayDuration=Math.sqrt(decayDistance/curveParameter)
+		const startTime=performance.now()
+		this.xAxis=new AnimationAxisState(
+			x,dx,decayDistance,
+			startTime,startTime,decayDuration
+		)
+		this.yAxis=new AnimationAxisState(
+			y,dy,decayDistance,
+			startTime,startTime,decayDuration
+		)
+	}
 	stepX(decayAxisDistance:number) {
 		const [x,y]=this.getPosition()
 		this.xAxis=this.makeSingleAxisState(x,decayAxisDistance)

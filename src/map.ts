@@ -375,11 +375,18 @@ export default class MapPane {
 		}
 	}
 	move(zoom:number,lat:number,lon:number):void {
-		this.panAnimation.stop()
-		const zoom1=Math.min(maxZoom,Math.max(0,zoom))
-		this.setPosition(...calculatePosition(zoom1,lat,lon))
-		this.reportMoveEnd()
-		this.redrawLayers()
+		const [,,currentZoom]=this.position
+		const targetZoom=Math.min(maxZoom,Math.max(0,zoom))
+		const targetPosition=calculatePosition(targetZoom,lat,lon)
+		if (currentZoom==targetZoom) {
+			const [x,y]=targetPosition
+			this.panAnimation.stepTo(x,y)
+		} else {
+			this.panAnimation.stop()
+			this.setPosition(...targetPosition)
+			this.reportMoveEnd()
+			this.redrawLayers()
+		}
 	}
 	getLayers():[key:string,name:string,value:boolean][] {
 		return layerNames.map(([key,name])=>[key,name,true])
