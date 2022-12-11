@@ -181,10 +181,48 @@ class GridMapLayer extends MapLayer {
 	}
 }
 
+class PanAxisAnimation {
+	constructor(
+		public startAxisPosition:number,
+		public decayAxisDistance:number,
+		public decayTotalDistance:number,
+		public startTime:number,
+		public decayStartTime:number,
+		public decayDuration:number
+	) {}
+	transitionToDecay(time:number):void {
+		if (time<this.decayStartTime) {
+			this.decayStartTime=time
+		}
+	}
+	isEnded(time:number):boolean {
+		return time>=this.decayStartTime+this.decayDuration
+	}
+	getAxisPosition(time:number):number {
+		let linearTime=time-this.startTime
+		if (time>this.decayStartTime) {
+			linearTime=this.decayStartTime-this.startTime
+		}
+		let decayRemainingTime=this.decayDuration
+		if (time>this.decayStartTime) {
+			decayRemainingTime-=(time-this.decayStartTime)
+		}
+		if (decayRemainingTime<0) {
+			decayRemainingTime=0
+		}
+		const axisDirection=this.decayAxisDistance/this.decayTotalDistance
+		return (
+			this.startAxisPosition +
+			axisDirection*linearTime +
+			this.decayAxisDistance-axisDirection*animationCurveParameter*decayRemainingTime**2
+		)
+	}
+}
+
 export default class MapPane {
 	private position=calculatePosition(initialZoom,initialLat,initialLon)
-	private animationRequestId:number|undefined
-	private animationConstantSpeedPhase:boolean|undefined
+	private panAnimationX:PanAxisAnimation|undefined
+	private panAnimationY:PanAxisAnimation|undefined
 	private readonly layers:Map<string,MapLayer>=new Map([
 		['tiles',new TileMapLayer],
 		['crosshair',new CrosshairMapLayer],
@@ -311,6 +349,7 @@ export default class MapPane {
 			const panStep=panStepBase*multiplier
 			const animateArrowKey=(dx:number,dy:number)=>{
 				if (ev.repeat) {
+					// TODO check if animation is in linear phase, extend it if yes
 					this.startConstantSpeedAnimation(dx,dy)
 				} else {
 					this.startStepAnimation(dx,dy)
@@ -340,11 +379,15 @@ export default class MapPane {
 		}
 
 		$surface.onkeyup=ev=>{
-			if ( // TODO separate animation states for each axis
-				ev.key=='ArrowLeft' || ev.key=='ArrowRight' ||
-				ev.key=='ArrowUp' || ev.key=='ArrowDown'
-			) {
-				this.transitionToDecayAnimation()
+			const time=performance.now()
+			if (ev.key=='ArrowLeft' || ev.key=='ArrowRight') {
+				if (this.panAnimationX) {
+					this.panAnimationX.transitionToDecay(time)
+				}
+			} else if (ev.key=='ArrowUp' || ev.key=='ArrowDown') {
+				if (this.panAnimationY) {
+					this.panAnimationY.transitionToDecay(time)
+				}
 			}
 		}
 	}
@@ -391,52 +434,51 @@ export default class MapPane {
 		}
 	}
 	private startAnimation(dx:number,dy:number,dp:number,decayDuration:number,constantSpeedPhaseDuration:number=0) {
-		if (this.animationRequestId) {
-			cancelAnimationFrame(this.animationRequestId)
-		}
-		this.animationConstantSpeedPhase=constantSpeedPhaseDuration>0
-		const [x0,y0,z]=this.position
+		const [x0,y0]=this.position
 		const startTime=performance.now()
-		let decayStartTime=startTime+constantSpeedPhaseDuration
+		if (dx) {
+			this.panAnimationX=new PanAxisAnimation(
+				x0,dx,dp,
+				startTime,startTime+constantSpeedPhaseDuration,decayDuration
+			)
+		} else {
+			this.panAnimationX=undefined
+		}
+		if (dy) {
+			this.panAnimationY=new PanAxisAnimation(
+				y0,dy,dp,
+				startTime,startTime+constantSpeedPhaseDuration,decayDuration
+			)
+		} else {
+			this.panAnimationY=undefined
+		}
 		const animateFrame=(time:number)=>{
-			let x=x0
-			let y=y0
-			if (time<decayStartTime) {
-				if (!this.animationConstantSpeedPhase) {
-					decayStartTime=time
+			let [x,y,z]=this.position
+			if (this.panAnimationX) {
+				x=this.panAnimationX.getAxisPosition(time)
+				if (this.panAnimationX.isEnded(time)) {
+					this.panAnimationX=undefined
 				}
-				x+=dx/dp*(time-startTime)
-				y+=dy/dp*(time-startTime)
 			}
-			if (time>=decayStartTime) {
-				let decayRemainingTime=decayDuration-(time-decayStartTime)
-				if (decayRemainingTime<=0) {
-					decayRemainingTime=0
+			if (this.panAnimationY) {
+				y=this.panAnimationY.getAxisPosition(time)
+				if (this.panAnimationY.isEnded(time)) {
+					this.panAnimationY=undefined
 				}
-				x+=dx-dx/dp*animationCurveParameter*decayRemainingTime**2
-				y+=dy-dy/dp*animationCurveParameter*decayRemainingTime**2
 			}
 			this.setPosition(x,y,z)
 			this.redrawLayers()
-			if (time<decayStartTime+decayDuration) {
-				this.animationRequestId=requestAnimationFrame(animateFrame)
+			if (this.panAnimationX || this.panAnimationY) {
+				requestAnimationFrame(animateFrame)
 			} else {
-				this.stopAnimation()
+				this.reportMoveEnd()
 			}
 		}
-		this.animationRequestId=requestAnimationFrame(animateFrame)
-	}
-	private transitionToDecayAnimation() {
-		if (this.animationConstantSpeedPhase) {
-			this.animationConstantSpeedPhase=false
-		}
+		requestAnimationFrame(animateFrame)
 	}
 	private stopAnimation() {
-		if (!this.animationRequestId) return
-		cancelAnimationFrame(this.animationRequestId)
-		this.reportMoveEnd()
-		this.animationRequestId=undefined
-		this.animationConstantSpeedPhase=undefined
+		this.panAnimationX=undefined
+		this.panAnimationY=undefined
 	}
 	private reportMoveEnd() {
 		const ev=new CustomEvent<Coordinates>('osmJsUi:mapMoveEnd',{
