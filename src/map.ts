@@ -205,7 +205,7 @@ export default class MapPane {
 		(x,y)=>{
 			const [,,z]=this.position
 			this.setPosition(x,y,z)
-			this.redrawLayers()
+			this.redraw()
 		},
 		()=>{
 			this.reportMoveEnd()
@@ -215,7 +215,9 @@ export default class MapPane {
 	private readonly tileLayer=new TileMapLayer
 	private readonly gridLayer=new GridMapLayer
 	private readonly crosshairLayer=new CrosshairMapLayer
-	private readonly $zoomButtons=makeDiv('buttons','controls')()
+	private readonly $zoomIn=makeButton(`Zoom in`,'zoom-in')
+	private readonly $zoomOut=makeButton(`Zoom out`,'zoom-out')
+	private readonly $zoomButtons=makeDiv('buttons','controls')(this.$zoomIn,this.$zoomOut)
 	private readonly $attribution=makeDiv('attribution')(
 		`© `,makeLink(`OpenStreetMap contributors`,`https://www.openstreetmap.org/copyright`)
 	)
@@ -226,10 +228,6 @@ export default class MapPane {
 		makeSimpleOptionalUiElement('attribution',`Attribution`,this.$attribution),
 	].map(oue=>[oue.key,oue]))
 	constructor(private readonly $map: HTMLElement) {
-		const $zoomIn=makeButton(`Zoom in`,'zoom-in')
-		const $zoomOut=makeButton(`Zoom out`,'zoom-out')
-		this.$zoomButtons.append($zoomIn,$zoomOut)
-
 		const $surface=makeDiv('surface')()
 		$surface.tabIndex=0
 		$map.append(
@@ -238,13 +236,13 @@ export default class MapPane {
 			this.$attribution
 		)
 
-		const resizeObserver=new ResizeObserver(()=>this.redrawLayers())
+		const resizeObserver=new ResizeObserver(()=>this.redraw())
 		resizeObserver.observe($map)
 
 		const pan=(dx:number,dy:number)=>{
 			const [x,y,z]=this.position
 			this.setPosition(x+dx,y+dy,z)
-			this.redrawLayers()
+			this.redraw()
 		}
 		const zoom=(dx:number,dy:number,dz:number)=>{
 			let [x,y,z]=this.position
@@ -256,7 +254,7 @@ export default class MapPane {
 			x=Math.floor(f*x+(f-1)*dx)
 			y=Math.floor(f*y+(f-1)*dy)
 			this.position=[x,y,z]
-			this.redrawLayers()
+			this.redraw()
 		}
 		const mouseZoom=(ev:MouseEvent,dz:number)=>{
 			const viewHalfSizeX=$map.clientWidth/2
@@ -326,12 +324,12 @@ export default class MapPane {
 			mouseZoom(ev,ev.shiftKey?-1:+1)
 			this.reportMoveEnd()
 		}
-		$zoomIn.onclick=()=>{
+		this.$zoomIn.onclick=()=>{
 			this.panAnimation.stop()
 			zoom(0,0,+1)
 			this.reportMoveEnd()
 		}
-		$zoomOut.onclick=()=>{
+		this.$zoomOut.onclick=()=>{
 			this.panAnimation.stop()
 			zoom(0,0,-1)
 			this.reportMoveEnd()
@@ -401,8 +399,8 @@ export default class MapPane {
 		} else {
 			this.panAnimation.stop()
 			this.setPosition(...targetPosition)
+			this.redraw()
 			this.reportMoveEnd()
-			this.redrawLayers()
 		}
 	}
 	listOptionalUiElements():[key:string,name:string,isVisible:boolean][] {
@@ -424,9 +422,12 @@ export default class MapPane {
 		})
 		this.$map.dispatchEvent(ev)
 	}
-	private redrawLayers() {
+	private redraw() {
 		this.tileLayer.redraw(this.position,this.$map.clientWidth,this.$map.clientHeight)
 		this.gridLayer.redraw(this.position,this.$map.clientWidth,this.$map.clientHeight)
+		const [,,z]=this.position
+		this.$zoomOut.disabled=z<=0
+		this.$zoomIn.disabled=z>=maxZoom
 	}
 	private setPosition(x:number,y:number,z:number) {
 		const mask=Math.pow(2,z+tileSizePow)-1
