@@ -16,16 +16,28 @@ const initialZoom=17
 const initialLat=59.93903
 const initialLon=30.31582
 
-const layerNames=[
-	['crosshair',`Crosshair`],
-	['grid',`Coordinate grid`],
-	['zoom',`Zoom buttons`], // TODO this is not a layer
-	['attribution',`Attribution`],
-]
+interface OptionalUiElement {
+	readonly key:string
+	readonly name:string
+	get visible():boolean
+	hide():void
+	show(position:Position,viewSizeX:number,viewSizeY:number):void
+}
 
-abstract class MapLayer {
-	public readonly $layer:HTMLElement
-	constructor(key:string) {
+const makeSimpleOptionalUiElement=(key:string,name:string,$element:HTMLElement):OptionalUiElement=>({
+	key,name,
+	get visible() { return $element.style.display!='none' },
+	hide() { $element.style.display='none' },
+	show() { $element.style.removeProperty('display') },
+})
+
+abstract class MapLayer implements OptionalUiElement {
+	readonly $layer:HTMLElement
+	readonly key:string
+	readonly name:string
+	constructor(key:string,name:string) {
+		this.key=key
+		this.name=name
 		this.$layer=makeDiv('layer',key)()
 	}
 	get visible():boolean {
@@ -48,7 +60,7 @@ class TileMapLayer extends MapLayer {
 	private previousTileYL?:number
 	private previousTileYU?:number
 	constructor() {
-		super('tiles')
+		super('tiles',`Map tiles`)
 	}
 	redraw(position:Position,viewSizeX:number,viewSizeY:number) {
 		if (!this.visible) {
@@ -104,16 +116,9 @@ class TileMapLayer extends MapLayer {
 	}
 }
 
-class CrosshairMapLayer extends MapLayer {
-	constructor() {
-		super('crosshair')
-		this.$layer.innerHTML=`<svg><use href="#map-crosshair" /></svg>`
-	}
-}
-
 class GridMapLayer extends MapLayer {
 	constructor() {
-		super('grid')
+		super('grid',`Coordinate grid`)
 	}
 	redraw([x,y,z]:Position,viewSizeX:number,viewSizeY:number) {
 		if (!this.visible) return this.$layer.replaceChildren()
@@ -182,6 +187,13 @@ class GridMapLayer extends MapLayer {
 	}
 }
 
+class CrosshairMapLayer extends MapLayer {
+	constructor() {
+		super('crosshair',`Crosshair`)
+		this.$layer.innerHTML=`<svg><use href="#map-crosshair" /></svg>`
+	}
+}
+
 export default class MapPane {
 	private position=calculatePosition(initialZoom,initialLat,initialLon)
 
@@ -200,25 +212,30 @@ export default class MapPane {
 		}
 	)
 	
-	private readonly layers:Map<string,MapLayer>=new Map([
-		['tiles',new TileMapLayer],
-		['crosshair',new CrosshairMapLayer],
-		['grid',new GridMapLayer],
-	])
+	private readonly tileLayer=new TileMapLayer
+	private readonly gridLayer=new GridMapLayer
+	private readonly crosshairLayer=new CrosshairMapLayer
+	private readonly $zoomButtons=makeDiv('buttons','controls')()
+	private readonly $attribution=makeDiv('attribution')(
+		`© `,makeLink(`OpenStreetMap contributors`,`https://www.openstreetmap.org/copyright`)
+	)
+	private readonly optionalUiElements:Map<string,OptionalUiElement>=new Map([
+		this.gridLayer,
+		this.crosshairLayer,
+		makeSimpleOptionalUiElement('zoom',`Zoom buttons`,this.$zoomButtons),
+		makeSimpleOptionalUiElement('attribution',`Attribution`,this.$attribution),
+	].map(oue=>[oue.key,oue]))
 	constructor(private readonly $map: HTMLElement) {
 		const $zoomIn=makeButton(`Zoom in`,'zoom-in')
 		const $zoomOut=makeButton(`Zoom out`,'zoom-out')
-		const $zoomButtons=makeDiv('buttons','controls')($zoomIn,$zoomOut)
+		this.$zoomButtons.append($zoomIn,$zoomOut)
 
 		const $surface=makeDiv('surface')()
 		$surface.tabIndex=0
-		const $attribution=makeDiv('attribution')(
-			`© `,makeLink(`OpenStreetMap contributors`,`https://www.openstreetmap.org/copyright`)
-		)
 		$map.append(
-			$zoomButtons,$surface,
-			...Array.from(this.layers.values(),layer=>layer.$layer),
-			$attribution
+			this.$zoomButtons,$surface,
+			this.tileLayer.$layer,this.gridLayer.$layer,this.crosshairLayer.$layer,
+			this.$attribution
 		)
 
 		const resizeObserver=new ResizeObserver(()=>this.redrawLayers())
@@ -388,16 +405,16 @@ export default class MapPane {
 			this.redrawLayers()
 		}
 	}
-	getLayers():[key:string,name:string,value:boolean][] {
-		return layerNames.map(([key,name])=>[key,name,true])
+	listOptionalUiElements():[key:string,name:string,isVisible:boolean][] {
+		return [...this.optionalUiElements.values()].map(oue=>[oue.key,oue.name,oue.visible])
 	}
-	toggleLayer(key:string,value:boolean):void {
-		const layer=this.layers.get(key)
-		if (!layer) return
-		if (value) {
-			layer.show(this.position,this.$map.clientWidth,this.$map.clientHeight)
+	toggleOptionalUiElement(key:string,isVisible:boolean):void {
+		const oue=this.optionalUiElements.get(key)
+		if (!oue) return
+		if (isVisible) {
+			oue.show(this.position,this.$map.clientWidth,this.$map.clientHeight)
 		} else {
-			layer.hide()
+			oue.hide()
 		}
 	}
 	private reportMoveEnd() {
@@ -408,9 +425,8 @@ export default class MapPane {
 		this.$map.dispatchEvent(ev)
 	}
 	private redrawLayers() {
-		for (const layer of this.layers.values()) {
-			layer.redraw(this.position,this.$map.clientWidth,this.$map.clientHeight)
-		}
+		this.tileLayer.redraw(this.position,this.$map.clientWidth,this.$map.clientHeight)
+		this.gridLayer.redraw(this.position,this.$map.clientWidth,this.$map.clientHeight)
 	}
 	private setPosition(x:number,y:number,z:number) {
 		const mask=Math.pow(2,z+tileSizePow)-1

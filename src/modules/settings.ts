@@ -13,12 +13,12 @@ export default class SettingsModule extends Module {
 		const content:Content=[
 			makeElement('h2')()(`Map layers`)
 		]
-		for (const [key,name,value] of this.map.getLayers()) {
+		for (const [key,name,value] of this.map.listOptionalUiElements()) {
 			const $layerCheckbox=document.createElement('input')
 			$layerCheckbox.type='checkbox'
 			$layerCheckbox.checked=value
 			$layerCheckbox.oninput=()=>{
-				this.map.toggleLayer(key,$layerCheckbox.checked)
+				this.map.toggleOptionalUiElement(key,$layerCheckbox.checked)
 			}
 			content.push(makeDiv()(
 				makeElement('label')()($layerCheckbox,name)
