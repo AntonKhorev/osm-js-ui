@@ -194,13 +194,74 @@ class CrosshairMapLayer extends MapLayer {
 	}
 }
 
+class PositionalMapLayerGroup {
+	tileLayer=new TileMapLayer
+	gridLayer=new GridMapLayer
+	private crossFade:{
+		outTileLayer:TileMapLayer
+		outGridLayer:TileMapLayer
+		offsetX:number
+		offsetY:number
+	}|undefined
+	readonly $layerGroup=makeDiv()(this.tileLayer.$layer,this.gridLayer.$layer)
+	redraw(position:Position,viewSizeX:number,viewSizeY:number):void {
+		if (this.crossFade) {
+			const [x,y,z]=position
+			const outPosition:Position=[
+				x+this.crossFade.offsetX,
+				y+this.crossFade.offsetY,
+				z
+			]
+			this.crossFade.outTileLayer.redraw(outPosition,viewSizeX,viewSizeY)
+			this.crossFade.outGridLayer.redraw(outPosition,viewSizeX,viewSizeY)
+		}
+		this.tileLayer.redraw(position,viewSizeX,viewSizeY)
+		this.gridLayer.redraw(position,viewSizeX,viewSizeY)
+	}
+	startCrossFade(offsetX:number,offsetY:number):void {
+		this.setCrossFadeProgress(1)
+		this.crossFade={
+			outTileLayer:this.tileLayer,
+			outGridLayer:this.gridLayer,
+			offsetX,offsetY
+		}
+		this.tileLayer=new TileMapLayer
+		this.gridLayer=new GridMapLayer
+		this.setCrossFadeOpacity(0)
+		this.$layerGroup.append(this.tileLayer.$layer,this.gridLayer.$layer)
+	}
+	setCrossFadeProgress(progress:number):void {
+		if (!this.crossFade) return
+		this.setCrossFadeOpacity(progress)
+		if (progress>=1) {
+			this.crossFade.outTileLayer.$layer.remove()
+			this.crossFade.outGridLayer.$layer.remove()
+			this.crossFade=undefined
+		}
+	}
+	private setCrossFadeOpacity(progress:number):void {
+		if (progress>=1) {
+			this.tileLayer.$layer.style.removeProperty('opacity')
+			this.gridLayer.$layer.style.removeProperty('opacity')
+		} else {
+			this.tileLayer.$layer.style.opacity=String(progress)
+			this.gridLayer.$layer.style.opacity=String(progress)
+		}
+	}
+}
+
 export default class MapPane {
 	private position=calculatePosition(initialZoom,initialLat,initialLon)
+	private readonly positionalLayerGroup=new PositionalMapLayerGroup
+	private readonly crosshairLayer=new CrosshairMapLayer
 
 	private panAnimation:Animation=new Animation(
 		()=>{
 			const [x,y]=this.position
 			return [x,y]
+		},
+		(crossFadeProgress)=>{
+			this.positionalLayerGroup.setCrossFadeProgress(crossFadeProgress)
 		},
 		(x,y)=>{
 			const [,,z]=this.position
@@ -212,9 +273,6 @@ export default class MapPane {
 		}
 	)
 	
-	private readonly tileLayer=new TileMapLayer
-	private readonly gridLayer=new GridMapLayer
-	private readonly crosshairLayer=new CrosshairMapLayer
 	private readonly $zoomIn=makeButton(`Zoom in`,'zoom-in')
 	private readonly $zoomOut=makeButton(`Zoom out`,'zoom-out')
 	private readonly $zoomButtons=makeDiv('buttons','controls')(this.$zoomIn,this.$zoomOut)
@@ -222,7 +280,7 @@ export default class MapPane {
 		`© `,makeLink(`OpenStreetMap contributors`,`https://www.openstreetmap.org/copyright`)
 	)
 	private readonly optionalUiElements:Map<string,OptionalUiElement>=new Map([
-		this.gridLayer,
+		this.positionalLayerGroup.gridLayer,
 		this.crosshairLayer,
 		makeSimpleOptionalUiElement('zoom',`Zoom buttons`,this.$zoomButtons),
 		makeSimpleOptionalUiElement('attribution',`Attribution`,this.$attribution),
@@ -232,8 +290,8 @@ export default class MapPane {
 		$surface.tabIndex=0
 		$map.append(
 			this.$zoomButtons,$surface,
-			this.tileLayer.$layer,this.gridLayer.$layer,this.crosshairLayer.$layer,
-			this.$attribution
+			this.positionalLayerGroup.$layerGroup,
+			this.crosshairLayer.$layer,this.$attribution
 		)
 
 		const resizeObserver=new ResizeObserver(()=>this.redraw())
@@ -395,7 +453,10 @@ export default class MapPane {
 		const targetPosition=calculatePosition(targetZoom,lat,lon)
 		if (currentZoom==targetZoom) {
 			const [x,y]=targetPosition
-			this.panAnimation.stepTo(x,y)
+			const crossFadeOffset=this.panAnimation.move(x,y)
+			if (crossFadeOffset) {
+				this.positionalLayerGroup.startCrossFade(...crossFadeOffset)
+			}
 		} else {
 			this.panAnimation.stop()
 			this.setPosition(...targetPosition)
@@ -423,8 +484,7 @@ export default class MapPane {
 		this.$map.dispatchEvent(ev)
 	}
 	private redraw() {
-		this.tileLayer.redraw(this.position,this.$map.clientWidth,this.$map.clientHeight)
-		this.gridLayer.redraw(this.position,this.$map.clientWidth,this.$map.clientHeight)
+		this.positionalLayerGroup.redraw(this.position,this.$map.clientWidth,this.$map.clientHeight)
 		const [,,z]=this.position
 		this.$zoomOut.disabled=z<=0
 		this.$zoomIn.disabled=z>=maxZoom

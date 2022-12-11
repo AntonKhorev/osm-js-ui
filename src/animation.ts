@@ -1,5 +1,6 @@
 const curveParameter=0.002 // [px/ms^2]
 const dragStepThreshold=32 // [px]
+const maxMoveDistance=2048 // [px]
 
 class AnimationAxisState {
 	constructor(
@@ -46,10 +47,16 @@ export default class Animation {
 	private requestId:number|undefined
 	private _xAxis:AnimationAxisState|undefined
 	private _yAxis:AnimationAxisState|undefined
+	private crossFade?:{
+		startTime:number
+		duration:number
+		stop?:true
+	}
 	private readonly animateFrame:(time:number)=>void
 	constructor(
 		private readonly getPosition:()=>[x:number,y:number],
-		updateCallback:(x:number,y:number)=>void,
+		crossFadeCallback:(crossFadeProgress:number)=>void,
+		moveCallback:(x:number,y:number)=>void,
 		endCallback:()=>void
 	){
 		this.animateFrame=(time:number)=>{
@@ -69,8 +76,16 @@ export default class Animation {
 				}
 				needUpdate=true
 			}
+			if (this.crossFade) {
+				if (this.crossFade.stop || time-this.crossFade.startTime>this.crossFade.duration) {
+					crossFadeCallback(1)
+					this.crossFade=undefined
+				} else {
+					crossFadeCallback((time-this.crossFade.startTime)/this.crossFade.duration)
+				}
+			}
 			if (needUpdate) {
-				updateCallback(x,y)
+				moveCallback(x,y)
 			}
 			if (this.xAxis || this.yAxis) {
 				this.requestId=requestAnimationFrame(this.animateFrame)
@@ -95,6 +110,9 @@ export default class Animation {
 	stop() {
 		this.xAxis=undefined
 		this.yAxis=undefined
+		if (this.crossFade) {
+			this.crossFade.stop=true
+		}
 	}
 	fling(speedX:number,speedY:number) {
 		const speed=Math.sqrt(speedX**2+speedY**2)
@@ -118,11 +136,26 @@ export default class Animation {
 			)
 		}
 	}
-	stepTo(targetX:number,targetY:number) {
-		const [x,y]=this.getPosition()
-		const dx=targetX-x
-		const dy=targetY-y
-		const decayDistance=Math.sqrt(dx**2+dy**2)
+	move(targetX:number,targetY:number):[crossFadeOffsetX:number,crossFadeOffsetY:number]|undefined {
+		let [x,y]=this.getPosition()
+		let dx=targetX-x
+		let dy=targetY-y
+		let decayDistance=Math.sqrt(dx**2+dy**2)
+		let crossFadeOffset:[crossFadeOffsetX:number,crossFadeOffsetY:number]|undefined
+		if (decayDistance>maxMoveDistance) {
+			const x1=targetX-dx*maxMoveDistance/decayDistance
+			const y1=targetY-dy*maxMoveDistance/decayDistance
+			crossFadeOffset=[x-x1,y-y1]
+			x=x1
+			y=y1
+			dx=targetX-x
+			dy=targetY-y
+			decayDistance=maxMoveDistance
+			this.crossFade={
+				startTime:performance.now(),
+				duration:Math.sqrt(decayDistance/curveParameter)
+			}
+		}
 		const decayDuration=Math.sqrt(decayDistance/curveParameter)
 		const startTime=performance.now()
 		this.xAxis=new AnimationAxisState(
@@ -133,6 +166,7 @@ export default class Animation {
 			y,dy,decayDistance,
 			startTime,startTime,decayDuration
 		)
+		return crossFadeOffset
 	}
 	stepX(decayAxisDistance:number) {
 		const [x,y]=this.getPosition()
