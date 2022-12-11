@@ -1,3 +1,4 @@
+import Animation from './animation'
 import {makeEscapeTag, escapeXml, makeDiv, makeButton, makeLink} from './util'
 
 export type Coordinates = [zoom:number, lat:number, lon:number]
@@ -8,7 +9,6 @@ const ex=makeEscapeTag(escapeXml)
 
 const tileSize=256
 const tileSizePow=8
-const animationCurveParameter=0.002 // [px/ms^2]
 
 const maxZoom=19
 const initialZoom=17
@@ -181,138 +181,6 @@ class GridMapLayer extends MapLayer {
 	}
 }
 
-class AnimationAxisState {
-	constructor(
-		public startAxisPosition:number,
-		public decayAxisDistance:number,
-		public decayTotalDistance:number,
-		public startTime:number,
-		public decayStartTime:number,
-		public decayDuration:number
-	) {}
-	transitionToDecay(time:number):void {
-		if (time<this.decayStartTime) {
-			this.decayStartTime=time
-		}
-	}
-	isLinear(time:number):boolean {
-		return time<this.decayStartTime
-	}
-	isEnded(time:number):boolean {
-		return time>=this.decayStartTime+this.decayDuration
-	}
-	getAxisPosition(time:number):number {
-		let linearTime=time-this.startTime
-		if (time>this.decayStartTime) {
-			linearTime=this.decayStartTime-this.startTime
-		}
-		let decayRemainingTime=this.decayDuration
-		if (time>this.decayStartTime) {
-			decayRemainingTime-=(time-this.decayStartTime)
-		}
-		if (decayRemainingTime<0) {
-			decayRemainingTime=0
-		}
-		const axisDirection=this.decayAxisDistance/this.decayTotalDistance
-		return (
-			this.startAxisPosition +
-			axisDirection*linearTime +
-			this.decayAxisDistance-axisDirection*animationCurveParameter*decayRemainingTime**2
-		)
-	}
-}
-
-class Animation {
-	private requestId:number|undefined
-	private _xAxis:AnimationAxisState|undefined
-	private _yAxis:AnimationAxisState|undefined
-	private readonly animateFrame:(time:number)=>void
-	constructor(
-		private readonly getPosition:()=>[x:number,y:number],
-		updateCallback:(x:number,y:number)=>void,
-		endCallback:()=>void
-	){
-		this.animateFrame=(time:number)=>{
-			let [x,y]=getPosition()
-			let needUpdate=false
-			if (this.xAxis) {
-				x=this.xAxis.getAxisPosition(time)
-				if (this.xAxis.isEnded(time)) {
-					this.xAxis=undefined
-				}
-				needUpdate=true
-			}
-			if (this.yAxis) {
-				y=this.yAxis.getAxisPosition(time)
-				if (this.yAxis.isEnded(time)) {
-					this.yAxis=undefined
-				}
-				needUpdate=true
-			}
-			if (needUpdate) {
-				updateCallback(x,y)
-			}
-			if (this.xAxis || this.yAxis) {
-				this.requestId=requestAnimationFrame(this.animateFrame)
-			} else {
-				this.requestId=undefined
-				endCallback()
-			}
-		}
-	}
-	get xAxis() { return this._xAxis }
-	get yAxis() { return this._yAxis }
-	set xAxis(xAxis:AnimationAxisState|undefined) {
-		this._xAxis=xAxis
-		if (this.requestId) return
-		this.requestId=requestAnimationFrame(this.animateFrame)
-	}
-	set yAxis(yAxis:AnimationAxisState|undefined) {
-		this._yAxis=yAxis
-		if (this.requestId) return
-		this.requestId=requestAnimationFrame(this.animateFrame)
-	}
-	stop() {
-		this.xAxis=undefined
-		this.yAxis=undefined
-	}
-	stepX(decayAxisDistance:number) {
-		const [x,y]=this.getPosition()
-		this.xAxis=this.makeSingleAxisState(x,decayAxisDistance)
-	}
-	stepY(decayAxisDistance:number) {
-		const [x,y]=this.getPosition()
-		this.yAxis=this.makeSingleAxisState(y,decayAxisDistance)
-	}
-	linearStepX(decayAxisDistance:number,linearPhaseDuration:number) {
-		const startTime=performance.now()
-		if (this.xAxis && this.xAxis.isLinear(startTime)) {
-			this.xAxis.decayStartTime=startTime+linearPhaseDuration
-		} else {
-			const [x,y]=this.getPosition()
-			this.xAxis=this.makeSingleAxisState(x,decayAxisDistance,linearPhaseDuration)
-		}
-	}
-	linearStepY(decayAxisDistance:number,linearPhaseDuration:number) {
-		const startTime=performance.now()
-		if (this.yAxis && this.yAxis.isLinear(startTime)) {
-			this.yAxis.decayStartTime=startTime+linearPhaseDuration
-		} else {
-			const [x,y]=this.getPosition()
-			this.yAxis=this.makeSingleAxisState(y,decayAxisDistance,linearPhaseDuration)
-		}
-	}
-	private makeSingleAxisState(startAxisPosition:number,decayAxisDistance:number,linearPhaseDuration:number=0):AnimationAxisState {
-		const decayTotalDistance=Math.abs(decayAxisDistance)
-		const decayDuration=Math.sqrt(decayTotalDistance/animationCurveParameter)
-		const startTime=performance.now()
-		return new AnimationAxisState(
-			startAxisPosition,decayAxisDistance,decayTotalDistance,
-			startTime,startTime+linearPhaseDuration,decayDuration
-		)
-	}
-}
-
 export default class MapPane {
 	private position=calculatePosition(initialZoom,initialLat,initialLon)
 
@@ -410,7 +278,7 @@ export default class MapPane {
 			$surface.releasePointerCapture(ev.pointerId)
 			updateDragKinetics(0,0)
 			if (dragSpeedX && dragSpeedY) {
-				this.startFlingAnimation(dragSpeedX,dragSpeedY)
+				this.panAnimation.fling(dragSpeedX,dragSpeedY)
 			} else {
 				this.reportMoveEnd()
 			}
@@ -523,40 +391,6 @@ export default class MapPane {
 		} else {
 			layer.hide()
 		}
-	}
-	private startFlingAnimation(speedX:number,speedY:number) {
-		const speed=Math.sqrt(speedX**2+speedY**2)
-		const dt=speed/(2*animationCurveParameter)
-		const dp=animationCurveParameter*dt**2
-		const dragStepThreshold=32 // [px]
-		if (dp<dragStepThreshold) {
-			this.reportMoveEnd()
-		} else {
-			const dx=dp*speedX/speed
-			const dy=dp*speedY/speed
-			this.startAnimation(dx,dy,dp,dt)
-		}
-	}
-	private startAnimation(dx:number,dy:number,dp:number,decayDuration:number,constantSpeedPhaseDuration:number=0) {
-		const [x0,y0]=this.position
-		const startTime=performance.now()
-		if (dx) {
-			this.panAnimation.xAxis=new AnimationAxisState(
-				x0,dx,dp,
-				startTime,startTime+constantSpeedPhaseDuration,decayDuration
-			)
-		} else {
-			this.panAnimation.xAxis=undefined
-		}
-		if (dy) {
-			this.panAnimation.yAxis=new AnimationAxisState(
-				y0,dy,dp,
-				startTime,startTime+constantSpeedPhaseDuration,decayDuration
-			)
-		} else {
-			this.panAnimation.yAxis=undefined
-		}
-		
 	}
 	private reportMoveEnd() {
 		const ev=new CustomEvent<Coordinates>('osmJsUi:mapMoveEnd',{
