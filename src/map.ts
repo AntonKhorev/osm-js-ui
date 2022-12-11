@@ -344,7 +344,7 @@ export default class MapPane {
 		}
 
 		$surface.onkeydown=ev=>{
-			const panStepBase=32
+			const panStepBase=64
 			const multiplier=ev.shiftKey?3:1
 			const panStep=panStepBase*multiplier
 			const animateArrowKey=(dx:number,dy:number)=>{
