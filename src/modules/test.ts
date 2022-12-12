@@ -15,6 +15,8 @@ export default class TestModule extends Module {
 			[`winter palace`,`#module=test&map=18/59.94044/30.31377`],
 			[`peter & paul cathedral`,`#module=test&map=18/59.95020/30.31642`],
 			[`mosque`,`#module=test&map=18/59.95520/30.32394`],
+			[`west of dateline`,`#module=test&map=10/67.5122/179.5798`],
+			[`east of dateline`,`#module=test&map=10/67.6599/-179.1856`],
 		]
 		for (const [name,href] of places) {
 			content.push(makeElement('p')()(

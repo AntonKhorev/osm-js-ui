@@ -209,12 +209,20 @@ export default class MapPane {
 		}
 	}
 	move(zoom:number,lat:number,lon:number):void {
-		const [,,currentZoom]=this.position
+		const [x1,y1,currentZoom]=this.position
 		const targetZoom=Math.min(maxZoom,Math.max(0,zoom))
 		const targetPosition=calculatePosition(targetZoom,lat,lon)
 		if (currentZoom==targetZoom) {
-			const [x,y]=targetPosition
-			const crossFadeOffset=this.panAnimation.move(x,y)
+			let [x2,y2]=targetPosition
+			const spaceSize=Math.pow(2,currentZoom+tileSizePow)
+			if (x1<x2) {
+				const x2w=x2-spaceSize
+				if (x1-x2w<x2-x1) x2=x2w
+			} else if (x1>x2) {
+				const x2w=x2+spaceSize
+				if (x2w-x1<x1-x2) x2=x2w
+			}
+			const crossFadeOffset=this.panAnimation.move(x2,y2)
 			if (crossFadeOffset) {
 				this.positionalLayerGroup.startCrossFade(...crossFadeOffset)
 			}
