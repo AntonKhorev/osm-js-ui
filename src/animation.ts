@@ -1,6 +1,7 @@
 const curveParameter=0.002 // [px/ms^2]
 const dragStepThreshold=32 // [px]
-const maxMoveDistance=2048 // [px]
+const maxMoveDistanceWithoutCrossFade=2048 // [px]
+const crossFadeMoveDistance=1024 // [px]
 
 class AnimationAxisState {
 	constructor(
@@ -142,15 +143,15 @@ export default class Animation {
 		let dy=targetY-y
 		let decayDistance=Math.sqrt(dx**2+dy**2)
 		let crossFadeOffset:[crossFadeOffsetX:number,crossFadeOffsetY:number]|undefined
-		if (decayDistance>maxMoveDistance) {
-			const x1=targetX-dx*maxMoveDistance/decayDistance
-			const y1=targetY-dy*maxMoveDistance/decayDistance
+		if (decayDistance>maxMoveDistanceWithoutCrossFade) {
+			const x1=targetX-dx*crossFadeMoveDistance/decayDistance
+			const y1=targetY-dy*crossFadeMoveDistance/decayDistance
 			crossFadeOffset=[x-x1,y-y1]
 			x=x1
 			y=y1
 			dx=targetX-x
 			dy=targetY-y
-			decayDistance=maxMoveDistance
+			decayDistance=crossFadeMoveDistance
 			this.crossFade={
 				startTime:performance.now(),
 				duration:Math.sqrt(decayDistance/curveParameter)
