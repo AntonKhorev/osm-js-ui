@@ -40,12 +40,12 @@ export default class MapPane {
 	private readonly $attribution=makeDiv('attribution')(
 		`© `,makeLink(`OpenStreetMap contributors`,`https://www.openstreetmap.org/copyright`)
 	)
-	private readonly optionalUiElements:Map<string,OptionalUiElement>=new Map([
-		this.positionalLayerGroup.gridLayer,
-		this.crosshairLayer,
+	private readonly optionalUiElements:Map<string,()=>OptionalUiElement>=new Map([
+		()=>this.positionalLayerGroup.gridLayer,
+		()=>this.crosshairLayer,
 		makeSimpleOptionalUiElement('zoom',`Zoom buttons`,this.$zoomButtons),
 		makeSimpleOptionalUiElement('attribution',`Attribution`,this.$attribution),
-	].map(oue=>[oue.key,oue]))
+	].map(getOue=>[getOue().key,getOue]))
 	constructor(private readonly $map: HTMLElement) {
 		const $surface=makeDiv('surface')()
 		$surface.tabIndex=0
@@ -226,10 +226,13 @@ export default class MapPane {
 		}
 	}
 	listOptionalUiElements():[key:string,name:string,isVisible:boolean][] {
-		return [...this.optionalUiElements.values()].map(oue=>[oue.key,oue.name,oue.visible])
+		return [...this.optionalUiElements.values()].map(getOue=>{
+			const oue=getOue()
+			return [oue.key,oue.name,oue.visible]
+		})
 	}
 	toggleOptionalUiElement(key:string,isVisible:boolean):void {
-		const oue=this.optionalUiElements.get(key)
+		const oue=this.optionalUiElements.get(key)?.()
 		if (!oue) return
 		if (isVisible) {
 			oue.show(this.position,this.$map.clientWidth,this.$map.clientHeight)

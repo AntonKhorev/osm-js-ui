@@ -13,7 +13,7 @@ export interface OptionalUiElement {
 	show(position:Position,viewSizeX:number,viewSizeY:number):void
 }
 
-export const makeSimpleOptionalUiElement=(key:string,name:string,$element:HTMLElement):OptionalUiElement=>({
+export const makeSimpleOptionalUiElement=(key:string,name:string,$element:HTMLElement):()=>OptionalUiElement=>()=>({
 	key,name,
 	get visible() { return $element.style.display!='none' },
 	hide() { $element.style.display='none' },
@@ -216,6 +216,9 @@ export class PositionalMapLayerGroup {
 		}
 		this.tileLayer=new TileMapLayer
 		this.gridLayer=new GridMapLayer
+		if (!this.crossFade.outGridLayer.visible) {
+			this.gridLayer.hide()
+		}
 		this.setCrossFadeOpacity(0)
 		this.$layerGroup.append(this.tileLayer.$layer,this.gridLayer.$layer)
 	}
