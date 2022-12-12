@@ -257,7 +257,7 @@ export default class MapPane {
 		const mask=Math.pow(2,z+tileSizePow)-1
 		this.position=[
 			x&mask,
-			Math.min(mask,Math.max(0,y)),
+			Math.min(mask,Math.max(0,Math.round(y))),
 			z
 		]
 	}
