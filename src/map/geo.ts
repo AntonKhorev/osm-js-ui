@@ -9,8 +9,10 @@ export function calculateX(zoom:number,lon:number):number {
 	return Math.floor(s*(lon+180)/360)
 }
 export function calculateY(zoom:number,lat:number):number {
+	const maxLat=85.0511287798
+	const validLat=Math.max(Math.min(maxLat,lat),-maxLat)
 	const s=2**(zoom+tileSizePow)
-	return Math.floor(s*(1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2)
+	return Math.floor(s*(1-Math.log(Math.tan(validLat*Math.PI/180) + 1/Math.cos(validLat*Math.PI/180))/Math.PI)/2)
 }
 export function calculatePosition(zoom:number,lat:number,lon:number):Position {
 	return [
