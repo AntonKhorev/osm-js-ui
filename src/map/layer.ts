@@ -1,4 +1,4 @@
-import {Position, tileSize, calculateCoords, calculateX, calculateY} from './geo'
+import {Position, tileSize, calculateCoords, calculateX, calculateY, calculateGridScaleAndStep} from './geo'
 import {makeDiv} from '../html'
 import {makeEscapeTag, escapeXml} from '../escape'
 
@@ -124,19 +124,6 @@ class GridMapLayer extends MapLayer {
 		const y2c=y+Math.floor(viewMinSize/2)
 		const [,lat1c,lon1c]=calculateCoords(x1c,y1c,z)
 		const [,lat2c,lon2c]=calculateCoords(x2c,y2c,z)
-		const calculateScaleAndStep=(latOrLonSpan:number):[scale:number,step:number]=>{
-			const logSpan=Math.log10(latOrLonSpan/2)
-			const scale=Math.floor(logSpan)
-			const remainder=logSpan-scale
-			let digit=1
-			if (remainder>Math.log10(5)) {
-				digit=5
-			} else if (remainder>Math.log10(2)) {
-				digit=2
-			}
-			const step=digit*10**scale
-			return [scale,step]
-		}
 		let svg=ex`<svg width="${viewSizeX}" height="${viewSizeY}">`
 		const writeMeshLines=(
 			xy:string,
@@ -147,7 +134,7 @@ class GridMapLayer extends MapLayer {
 			calculateTextPixelAlong:()=>number,
 			calculateTextPixelAcross:(currentPixel:number)=>number
 		):void=>{
-			const [coordScale,coordStep]=calculateScaleAndStep(scaleCoordRange)
+			const [coordScale,coordStep]=calculateGridScaleAndStep(scaleCoordRange)
 			const coordBase=Math.ceil(coord1/coordStep)*coordStep
 			for (let i=0;;i++) {
 				const currentCoord=coordBase+i*coordStep

@@ -26,3 +26,27 @@ export function calculateCoords(x:number,y:number,z:number):Coordinates {
 		x/Math.pow(2,z+tileSizePow)*360-180
 	]
 }
+
+export function calculateGridScaleAndStep(latOrLonSpan:number):[scale:number,step:number] {
+	const testSpan=latOrLonSpan/2 // try to get 3 grid lines
+	if (testSpan>20) {
+		let scale=20
+		for (const tryScale of [30,60,90,180,360]) {
+			if (tryScale>testSpan) break
+			scale=tryScale
+		}
+		return [1,scale]
+	} else {
+		const logSpan=Math.log10(testSpan)
+		const scale=Math.floor(logSpan)
+		const remainder=logSpan-scale
+		let digit=1
+		if (remainder>Math.log10(5)) {
+			digit=5
+		} else if (remainder>Math.log10(2)) {
+			digit=2
+		}
+		const step=digit*10**scale
+		return [scale,step]
+	}
+}
