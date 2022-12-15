@@ -1,10 +1,10 @@
-import Animation from './animation'
+import Animation from './map/animation'
 import {
 	OptionalUiElement, makeSimpleOptionalUiElement,
 	CrosshairMapLayer, PositionalMapLayerGroup
-} from './layer'
+} from './map/layer'
 import {makeDiv, makeButton, makeLink} from './html'
-import {Coordinates, tileSizePow, calculatePosition, calculateCoords} from './geo'
+import {Coordinates, tileSizePow, calculatePosition, calculateCoords} from './map/geo'
 
 const maxZoom=19
 const initialZoom=17

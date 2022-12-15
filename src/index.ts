@@ -1,6 +1,6 @@
 import SidebarPane from './sidebar'
 import MapPane from './map'
-import {Coordinates} from './geo'
+import {Coordinates} from './map/geo'
 import {makeDiv, makeButton} from './html'
 import MenuModule from './modules/menu'
 import TestModule from './modules/test'

@@ -1,6 +1,6 @@
 import {Position, tileSize, calculateCoords, calculateX, calculateY} from './geo'
-import {makeDiv} from './html'
-import {makeEscapeTag, escapeXml} from './escape'
+import {makeDiv} from '../html'
+import {makeEscapeTag, escapeXml} from '../escape'
 
 const eu=makeEscapeTag(encodeURIComponent)
 const ex=makeEscapeTag(escapeXml)
