@@ -23,6 +23,8 @@ const bundle=await rollup({
 	plugins: [typescript()]
 })
 bundle.write({
+	preserveModules: true,
+	preserveModulesRoot: 'src',
 	dir: `test-build`
 })
 bundle.close()
