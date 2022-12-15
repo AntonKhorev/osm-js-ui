@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "build": "node build.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node build-test.js && mocha"
   },
   "author": "Anton Khorev",
   "license": "MIT",
   "devDependencies": {
     "@rollup/plugin-typescript": "^9.0.2",
+    "mocha": "^10.2.0",
     "rollup": "^3.3.0",
     "tslib": "^2.4.1",
     "typescript": "^4.9.3"
