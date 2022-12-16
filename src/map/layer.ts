@@ -175,7 +175,7 @@ export class PositionalMapLayerGroup {
 	gridLayer=new GridMapLayer
 	private crossFade:{
 		outTileLayer:TileMapLayer
-		outGridLayer:TileMapLayer
+		outGridLayer:GridMapLayer
 		offsetX:number
 		offsetY:number
 	}|undefined
