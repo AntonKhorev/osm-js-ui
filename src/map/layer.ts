@@ -48,6 +48,7 @@ class TileMapLayer extends MapLayer {
 	private previousTileXU?:number
 	private previousTileYL?:number
 	private previousTileYU?:number
+	private tiles=new Map<string,HTMLImageElement>()
 	constructor() {
 		super('tiles',`Map tiles`)
 	}
@@ -82,16 +83,30 @@ class TileMapLayer extends MapLayer {
 			this.previousTileXL!=tileX-nExtraTilesXL || this.previousTileXU!=tileX+nExtraTilesXU ||
 			this.previousTileYL!=tileY-nExtraTilesYL || this.previousTileYU!=tileX+nExtraTilesYU
 		) {
-			this.$layer.replaceChildren()
+			const tilesToRemove=new Set<string>(this.tiles.keys())
 			this.$layer.style.removeProperty('translate')
 			for (let iTileY=-nExtraTilesYL;iTileY<=nExtraTilesYU;iTileY++) {
 				for (let iTileX=-nExtraTilesXL;iTileX<=nExtraTilesXU;iTileX++) {
-					const tileUrl=eu`https://tile.openstreetmap.org/${z}/${(tileX+iTileX)&tileMask}/${tileY+iTileY}.png`
-					const $img=document.createElement('img')
-					$img.src=tileUrl
-					$img.style.translate=`${transX+iTileX*tileSize}px ${transY+iTileY*tileSize}px`
-					this.$layer.append($img)
+					const translateValue=`${transX+iTileX*tileSize}px ${transY+iTileY*tileSize}px`
+					const tileKey=eu`${z}/${(tileX+iTileX)&tileMask}/${tileY+iTileY}`
+					let $img=this.tiles.get(tileKey)
+					if ($img) {
+						tilesToRemove.delete(tileKey)
+						$img.style.translate=translateValue
+					} else {
+						$img=document.createElement('img')
+						this.tiles.set(tileKey,$img)
+						const tileUrl=`https://tile.openstreetmap.org/${tileKey}.png`
+						$img.src=tileUrl
+						$img.style.translate=translateValue
+						this.$layer.append($img)
+					}
 				}
+			}
+			for (const tileKey of tilesToRemove) {
+				const $img=this.tiles.get(tileKey)
+				this.tiles.delete(tileKey)
+				$img?.remove()
 			}
 			this.previousPosition=position
 			this.previousTileXL=tileX-nExtraTilesXL
