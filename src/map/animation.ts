@@ -141,6 +141,11 @@ export default class Animation {
 		let [x,y]=this.getPosition()
 		let dx=targetX-x
 		let dy=targetY-y
+		if (dx==0 && dy==0) {
+			this.xAxis=undefined
+			this.yAxis=undefined
+			return
+		}
 		let decayDistance=Math.sqrt(dx**2+dy**2)
 		let crossFadeOffset:[crossFadeOffsetX:number,crossFadeOffsetY:number]|undefined
 		if (decayDistance>maxMoveDistanceWithoutCrossFade) {
