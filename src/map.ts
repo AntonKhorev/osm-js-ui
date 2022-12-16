@@ -89,7 +89,7 @@ export default class MapPane {
 			$surface,
 			()=>this.panAnimation.stop(),
 			(speedX,speedY)=>this.panAnimation.fling(speedX,speedY),
-			(dx,dy)=>pan(dx,dy)
+			pan,zoom
 		)
 
 		$surface.onwheel=ev=>{

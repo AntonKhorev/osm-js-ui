@@ -21,8 +21,12 @@ export default class Grab {
 		$surface:HTMLElement,
 		stopAnimation:()=>void,
 		startFlingAnimation:(speedX:number,speedY:number)=>void,
-		pan:(dx:number,dy:number)=>void
+		pan:(dx:number,dy:number)=>void,
+		zoom:(dx:number,dy:number,dz:number)=>void
 	) {
+		const minSquaredDistanceBetweenPointers=32
+		let initialSquaredDistanceBetweenPointers:number|undefined
+		let currentRelativeZoom=0
 		const pointers=new Map<number,[x:number,y:number]>()
 		let drag:Drag|undefined
 		const getAveragePosition=():[averageX:number,averageY:number]=>{
@@ -37,12 +41,21 @@ export default class Grab {
 				Math.round(sumY/pointers.size)
 			]
 		}
+		const getSquaredDistanceBetweenPointers=():number|undefined=>{
+			if (pointers.size<2) return undefined
+			const [[x1,y1],[x2,y2]]=pointers.values()
+			return Math.max(minSquaredDistanceBetweenPointers,(x2-x1)**2+(y2-y1)**2)
+		}
 		const respondToPointerSetUpdate=()=>{
 			$surface.classList.toggle('grabbed',pointers.size>0)
 			if (pointers.size==0) {
 				drag=undefined
 			} else {
 				drag=new Drag(...getAveragePosition(),performance.now())
+			}
+			initialSquaredDistanceBetweenPointers=getSquaredDistanceBetweenPointers()
+			if (pointers.size<=1) {
+				currentRelativeZoom=0
 			}
 		}
 		$surface.onpointerdown=ev=>{
@@ -63,11 +76,20 @@ export default class Grab {
 		$surface.onpointermove=ev=>{
 			if (!pointers.has(ev.pointerId)) return
 			pointers.set(ev.pointerId,[ev.clientX,ev.clientY])
-			// TODO check if have to zoom
 			if (!drag) return
 			const [x,y]=getAveragePosition()
 			pan(drag.x-x,drag.y-y)
 			drag.update(x,y,performance.now())
+			const newSquaredDistanceBetweenPointers=getSquaredDistanceBetweenPointers()
+			if (initialSquaredDistanceBetweenPointers && newSquaredDistanceBetweenPointers) {
+				const newRelativeZoom=Math.round((
+					Math.log2(newSquaredDistanceBetweenPointers**2)-
+					Math.log2(initialSquaredDistanceBetweenPointers**2)
+				)/2)
+				const dz=newRelativeZoom-currentRelativeZoom
+				if (dz) zoom(0,0,dz)
+				currentRelativeZoom=newRelativeZoom
+			}
 		}
 	}
 }
