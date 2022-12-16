@@ -142,6 +142,7 @@ body > .symbols {
 .ui .map {
 	overflow: hidden;
 	z-index: 1;
+	background: #DDD;
 }
 .ui.with-map .map {
 	display: block;
