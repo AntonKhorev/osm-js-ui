@@ -43,6 +43,7 @@ export default class Grab {
 			}
 		}
 		$surface.onpointerdown=ev=>{
+			if (ev.isPrimary) pointers.clear()
 			if (pointers.size>=2 && !pointers.has(ev.pointerId)) return
 			stopAnimation()
 			$surface.setPointerCapture(ev.pointerId)
