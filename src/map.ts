@@ -1,4 +1,4 @@
-import Drag from './map/drag'
+import Grab from './map/grab'
 import Animation from './map/animation'
 import {
 	OptionalUiElement, makeSimpleOptionalUiElement,
@@ -84,33 +84,13 @@ export default class MapPane {
 			zoom(dx,dy,dz)
 		}
 
-		let drag:Drag|undefined
-		$surface.onpointerdown=ev=>{
-			// TODO:
-			// if ev.isPrimary: start drag
-			// else if drag ongoing: start pinch
-			// else if pinch ongoing: ignore
-			this.panAnimation.stop()
-			drag=new Drag(ev.clientX,ev.clientY,performance.now())
-			$surface.setPointerCapture(ev.pointerId)
-			$surface.classList.add('grabbed')
-		}
-		$surface.onpointerup=$surface.onpointercancel=ev=>{
-			$surface.classList.remove('grabbed')
-			if (!drag) return
-			drag.update(ev.clientX,ev.clientY,performance.now())
-			if (drag.isMoving) {
-				this.panAnimation.fling(drag.speedX,drag.speedY)
-			} else {
-				this.reportMoveEnd()
-			}
-			drag=undefined
-		}
-		$surface.onpointermove=ev=>{
-			if (!drag) return
-			pan(drag.x-ev.clientX,drag.y-ev.clientY)
-			drag.update(ev.clientX,ev.clientY,performance.now())
-		}
+		
+		const grab=new Grab(
+			$surface,
+			()=>this.panAnimation.stop(),
+			(speedX,speedY)=>this.panAnimation.fling(speedX,speedY),
+			(dx,dy)=>pan(dx,dy)
+		)
 
 		$surface.onwheel=ev=>{
 			this.panAnimation.stop()
