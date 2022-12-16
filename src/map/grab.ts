@@ -32,7 +32,10 @@ export default class Grab {
 				sumX+=x
 				sumY+=y
 			}
-			return [sumX/pointers.size,sumY/pointers.size]
+			return [
+				Math.round(sumX/pointers.size),
+				Math.round(sumY/pointers.size)
+			]
 		}
 		const respondToPointerSetUpdate=()=>{
 			$surface.classList.toggle('grabbed',pointers.size>0)
