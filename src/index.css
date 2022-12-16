@@ -149,6 +149,7 @@ body > .symbols {
 	position: absolute;
 	inset: 0;
 	cursor: grab;
+	touch-action: none;
 }
 .ui .map .surface.grabbed {
 	cursor: grabbing;
