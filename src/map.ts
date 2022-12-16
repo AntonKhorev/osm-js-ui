@@ -1,3 +1,4 @@
+import Drag from './map/drag'
 import Animation from './map/animation'
 import {
 	OptionalUiElement, makeSimpleOptionalUiElement,
@@ -83,52 +84,32 @@ export default class MapPane {
 			zoom(dx,dy,dz)
 		}
 
-		let dragTime:number|undefined
-		let dragX:number|undefined
-		let dragY:number|undefined
-		let dragSpeedX:number|undefined
-		let dragSpeedY:number|undefined
-		const updateDragKinetics=(dx:number,dy:number)=>{
-			if (dragTime==null) return
-			if (dragSpeedX==null || dragSpeedY==null) return
-			const t=performance.now()
-			const dt=t-dragTime
-			const decayRate=0.003
-			const decay=Math.exp(-decayRate*dt)
-			dragSpeedX=dragSpeedX*decay+dx/dt*(1-decay)
-			dragSpeedY=dragSpeedY*decay+dy/dt*(1-decay)
-			dragTime=t
-		}
+		let drag:Drag|undefined
 		$surface.onpointerdown=ev=>{
+			// TODO:
+			// if ev.isPrimary: start drag
+			// else if drag ongoing: start pinch
+			// else if pinch ongoing: ignore
 			this.panAnimation.stop()
-			dragTime=performance.now()
-			dragX=ev.clientX
-			dragY=ev.clientY
-			dragSpeedX=dragSpeedY=0
+			drag=new Drag(ev.clientX,ev.clientY,performance.now())
 			$surface.setPointerCapture(ev.pointerId)
 			$surface.classList.add('grabbed')
 		}
-		$surface.onpointerup=ev=>{
+		$surface.onpointerup=$surface.onpointercancel=ev=>{
 			$surface.classList.remove('grabbed')
-			$surface.releasePointerCapture(ev.pointerId)
-			updateDragKinetics(0,0)
-			if (dragSpeedX && dragSpeedY) {
-				this.panAnimation.fling(dragSpeedX,dragSpeedY)
+			if (!drag) return
+			drag.update(ev.clientX,ev.clientY,performance.now())
+			if (drag.isMoving) {
+				this.panAnimation.fling(drag.speedX,drag.speedY)
 			} else {
 				this.reportMoveEnd()
 			}
-			dragTime=undefined
-			dragX=dragY=undefined
-			dragSpeedX=dragSpeedY=undefined
+			drag=undefined
 		}
 		$surface.onpointermove=ev=>{
-			if (dragX==null || dragY==null) return
-			const dx=dragX-ev.clientX
-			const dy=dragY-ev.clientY
-			pan(dx,dy)
-			dragX=ev.clientX
-			dragY=ev.clientY
-			updateDragKinetics(dx,dy)
+			if (!drag) return
+			pan(drag.x-ev.clientX,drag.y-ev.clientY)
+			drag.update(ev.clientX,ev.clientY,performance.now())
 		}
 
 		$surface.onwheel=ev=>{
