@@ -49,6 +49,14 @@ class TileMapLayer extends MapLayer {
 	private previousTileYL?:number
 	private previousTileYU?:number
 	private tiles=new Map<string,HTMLImageElement>()
+	private imageLoadListener=(ev:Event)=>{
+		const $img=ev.target
+		if (!($img instanceof HTMLImageElement)) return
+		if (!$img.dataset.key) return
+		if (!this.tiles.has($img.dataset.key)) return
+		$img.classList.add('fade-in')
+		this.$layer.append($img)
+	}
 	constructor() {
 		super('tiles',`Map tiles`)
 	}
@@ -95,11 +103,16 @@ class TileMapLayer extends MapLayer {
 						$img.style.translate=translateValue
 					} else {
 						$img=document.createElement('img')
+						$img.dataset.key=tileKey
 						this.tiles.set(tileKey,$img)
 						const tileUrl=`https://tile.openstreetmap.org/${tileKey}.png`
 						$img.src=tileUrl
 						$img.style.translate=translateValue
-						this.$layer.append($img)
+						if ($img.complete) {
+							this.$layer.append($img)
+						} else {
+							$img.onload=this.imageLoadListener
+						}
 					}
 				}
 			}
