@@ -159,8 +159,7 @@ async function main() {
 		moveStartOffset=pointerPosition-sidebarSize
 		$resizeUi.setPointerCapture(ev.pointerId)
 	}
-	$resizeUi.onpointerup=ev=>{
-		$resizeUi.releasePointerCapture(ev.pointerId)
+	$resizeUi.onpointerup=$resizeUi.onpointercancel=ev=>{
 		moveStartOffset=undefined
 		storePaneSizes()
 	}
