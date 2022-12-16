@@ -2,11 +2,13 @@ import * as fs from 'fs/promises'
 import { rollup } from 'rollup'
 import typescript from '@rollup/plugin-typescript'
 
-// remove previous build
-await fs.rm('dist',{recursive: true, force: true})
-await fs.mkdir('dist')
-
 {
+	// remove previous build; don't remove dist dir to be more live-server-friendly
+	await fs.mkdir('dist',{recursive: true})
+	for (const filename of await fs.readdir('dist')) {
+		await fs.rm(`dist/${filename}`,{recursive: true, force: true})
+	}
+}{
 	// process svgs
 	let embeddedStyles=''
 	let embeddedSymbols=''
